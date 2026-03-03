@@ -1,6 +1,6 @@
 <div align="center">
   <div style="background-color: #f97316; display: inline-block; padding: 16px; border-radius: 16px; margin-bottom: 16px;">
-    <img src="public/logo-white.ico" alt="OptSolv Logo" width="80" height="80" />
+    <img src="public/logo-white.ico" alt="OptSolv Logo" width="80" height="100" />
   </div>
   
   # OptSolv Time Tracker
