@@ -1,0 +1,45 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import { useUIStore } from "@/stores/ui.store";
+import { AnimatePresence, motion } from "framer-motion";
+import { Header } from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Main content */}
+      <div
+        className={cn(
+          "flex flex-1 flex-col overflow-hidden transition-all duration-300",
+          sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[260px]",
+        )}
+      >
+        <Header />
+
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+    </div>
+  );
+}

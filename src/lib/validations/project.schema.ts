@@ -1,0 +1,29 @@
+import { z } from "zod";
+
+/** Validation schema for creating/editing a project */
+export const projectSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Nome deve ter pelo menos 2 caracteres")
+    .max(100, "Máximo de 100 caracteres"),
+  code: z
+    .string()
+    .min(2, "Código deve ter pelo menos 2 caracteres")
+    .max(20, "Máximo de 20 caracteres")
+    .regex(
+      /^[A-Z0-9-]+$/,
+      "Código deve conter apenas letras maiúsculas, números e hífens",
+    ),
+  clientName: z.string().optional(),
+  description: z.string().max(500).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Cor deve ser um código hex válido"),
+  billable: z.boolean().default(true),
+  budget: z.number().min(0).optional(),
+  azureProjectId: z.string().optional(),
+  memberIds: z.array(z.string()).default([]),
+  managerId: z.string().min(1, "Selecione um manager"),
+});
+
+export type ProjectFormData = z.infer<typeof projectSchema>;

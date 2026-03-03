@@ -1,0 +1,53 @@
+"use client";
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface UIState {
+  /** Sidebar collapsed state */
+  sidebarCollapsed: boolean;
+  /** Current theme */
+  theme: "dark" | "light";
+  /** Active modal identifier */
+  activeModal: string | null;
+  /** Whether mobile sidebar is open */
+  mobileSidebarOpen: boolean;
+}
+
+interface UIActions {
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  setTheme: (theme: "dark" | "light") => void;
+  toggleTheme: () => void;
+  openModal: (id: string) => void;
+  closeModal: () => void;
+  setMobileSidebarOpen: (open: boolean) => void;
+}
+
+export const useUIStore = create<UIState & UIActions>()(
+  persist(
+    (set, get) => ({
+      sidebarCollapsed: false,
+      theme: "dark",
+      activeModal: null,
+      mobileSidebarOpen: false,
+
+      toggleSidebar: () =>
+        set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () =>
+        set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+      openModal: (id) => set({ activeModal: id }),
+      closeModal: () => set({ activeModal: null }),
+      setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
+    }),
+    {
+      name: "optsolv-ui",
+      partialize: (state) => ({
+        sidebarCollapsed: state.sidebarCollapsed,
+        theme: state.theme,
+      }),
+    },
+  ),
+);
