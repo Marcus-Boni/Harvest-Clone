@@ -1,17 +1,18 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Moon, Save, Sun, User } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { MOCK_CURRENT_USER } from "@/lib/mock-data";
+import { Switch } from "@/components/ui/switch";
+import { useSession } from "@/lib/auth-client";
 import { getInitials } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { motion } from "framer-motion";
-import { Moon, Save, Sun, User } from "lucide-react";
 import { useUIStore } from "@/stores/ui.store";
+import type { User as UserType } from "@/types/user";
 
 const containerVariants = {
   hidden: {},
@@ -24,7 +25,10 @@ const itemVariants = {
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useUIStore();
-  const user = MOCK_CURRENT_USER;
+  const { data: session } = useSession();
+  const user = session?.user as unknown as UserType;
+
+  if (!user) return null;
 
   return (
     <motion.div
@@ -55,13 +59,11 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border-2 border-border">
                 <AvatarFallback className="bg-brand-500/10 text-lg font-bold text-brand-500">
-                  {getInitials(user.displayName)}
+                  {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium text-foreground">
-                  {user.displayName}
-                </p>
+                <p className="font-medium text-foreground">{user.name}</p>
                 <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </div>
@@ -69,7 +71,7 @@ export default function SettingsPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" defaultValue={user.displayName} />
+                <Input id="name" defaultValue={user.name} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

@@ -1,26 +1,5 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import {
-  MOCK_CURRENT_USER,
-  MOCK_PROJECTS,
-  MOCK_TIME_ENTRIES,
-  getMockTodayHours,
-  getMockWeeklyHours,
-} from "@/lib/mock-data";
-import {
-  cn,
-  formatDecimalHours,
-  formatDuration,
-  getInitials,
-  getRelativeTime,
-  getStatusColor,
-} from "@/lib/utils";
-import { useTimerStore } from "@/stores/timer.store";
 import { motion } from "framer-motion";
 import {
   AlertCircle,
@@ -29,7 +8,6 @@ import {
   Clock,
   Folder,
   Play,
-  Plus,
   Timer,
   TrendingUp,
 } from "lucide-react";
@@ -38,11 +16,31 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
+  ResponsiveContainer,
   XAxis,
   YAxis,
 } from "recharts";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useSession } from "@/lib/auth-client";
+import {
+  getMockTodayHours,
+  getMockWeeklyHours,
+  MOCK_CURRENT_USER,
+  MOCK_PROJECTS,
+  MOCK_TIME_ENTRIES,
+} from "@/lib/mock-data";
+import {
+  cn,
+  formatDecimalHours,
+  formatDuration,
+  getStatusColor,
+} from "@/lib/utils";
+import { useTimerStore } from "@/stores/timer.store";
+import { toast } from "sonner";
 
 const containerVariants = {
   hidden: {},
@@ -68,6 +66,8 @@ export default function DashboardPage() {
     100,
   );
   const timerStore = useTimerStore();
+  const { data: session } = useSession();
+  const user = session?.user || MOCK_CURRENT_USER;
 
   const recentEntries = MOCK_TIME_ENTRIES.filter(
     (e) => e.userId === "user-1",
@@ -86,7 +86,12 @@ export default function DashboardPage() {
       {/* Page Header */}
       <motion.div variants={itemVariants}>
         <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">
-          Bom dia, {MOCK_CURRENT_USER.displayName.split(" ")[0]}! 👋
+          {new Date().getHours() < 12
+            ? "Bom dia"
+            : new Date().getHours() < 18
+            ? "Boa tarde"
+            : "Boa noite"}
+          , {user.name?.split(" ")[0]}! 👋
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Aqui está o resumo do seu dia de trabalho.

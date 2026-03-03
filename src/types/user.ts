@@ -4,8 +4,8 @@ export type UserRole = "member" | "manager" | "admin";
 export interface User {
   id: string;
   email: string;
-  displayName: string;
-  avatar?: string;
+  name: string;
+  image?: string;
   role: UserRole;
   department?: string;
   managerId?: string;
@@ -23,8 +23,8 @@ export interface User {
 /** Minimal user info for display in lists and cards */
 export interface UserSummary {
   id: string;
-  displayName: string;
+  name: string;
   email: string;
-  avatar?: string;
+  image?: string;
   role: UserRole;
 }

@@ -1,5 +1,8 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Clock, Pause, Play, Plus, Square, Timer } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +10,12 @@ import { Input } from "@/components/ui/input";
 import { MOCK_PROJECTS, MOCK_TIME_ENTRIES } from "@/lib/mock-data";
 import {
   cn,
-  formatDecimalHours,
   formatDateLabel,
+  formatDecimalHours,
+  formatTimerDisplay,
   getStatusColor,
 } from "@/lib/utils";
 import { useTimerStore } from "@/stores/timer.store";
-import { motion } from "framer-motion";
-import { Clock, Pause, Play, Plus, Square, Timer } from "lucide-react";
-import { useEffect, useState } from "react";
-import { formatTimerDisplay } from "@/lib/utils";
 
 const containerVariants = {
   hidden: {},

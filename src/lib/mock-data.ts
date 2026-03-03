@@ -11,8 +11,8 @@ import type { User } from "@/types/user";
 export const MOCK_CURRENT_USER: User = {
   id: "user-1",
   email: "marcus@optsolv.com",
-  displayName: "Marcus Galvão",
-  avatar: undefined,
+  name: "Marcus Galvão",
+  image: undefined,
   role: "manager",
   department: "Engenharia",
   managerId: undefined,
@@ -28,7 +28,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-2",
     email: "ana@optsolv.com",
-    displayName: "Ana Beatriz Silva",
+    name: "Ana Beatriz Silva",
     role: "member",
     department: "Engenharia",
     managerId: "user-1",
@@ -40,7 +40,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-3",
     email: "rafael@optsolv.com",
-    displayName: "Rafael Costa",
+    name: "Rafael Costa",
     role: "member",
     department: "Design",
     managerId: "user-1",
@@ -52,7 +52,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-4",
     email: "julia@optsolv.com",
-    displayName: "Julia Fernandes",
+    name: "Julia Fernandes",
     role: "admin",
     department: "Engenharia",
     weeklyCapacity: 40,
@@ -63,7 +63,7 @@ export const MOCK_USERS: User[] = [
   {
     id: "user-5",
     email: "pedro@optsolv.com",
-    displayName: "Pedro Henrique Oliveira",
+    name: "Pedro Henrique Oliveira",
     role: "member",
     department: "Backend",
     managerId: "user-1",

@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   BarChart3,
@@ -10,6 +9,7 @@ import {
   Link2,
   Users,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },

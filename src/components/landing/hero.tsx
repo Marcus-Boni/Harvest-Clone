@@ -1,16 +1,16 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   motion,
+  useInView,
   useMotionValue,
   useSpring,
   useTransform,
-  useInView,
 } from "framer-motion";
 import { ArrowRight, Play } from "lucide-react";
 import Link from "next/link";
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 /** Animated number counter for stats */
 function AnimatedNumber({
@@ -32,7 +32,7 @@ function AnimatedNumber({
       if (!start) start = timestamp;
       const progress = Math.min((timestamp - start) / duration, 1);
       // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - (1 - progress) ** 3;
       setDisplay(Math.round(eased * value));
       if (progress < 1) requestAnimationFrame(step);
     };
@@ -74,6 +74,7 @@ export function Hero() {
   };
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: <Not needed, it's just for mouse tracking>
     <section
       ref={containerRef}
       onMouseMove={handleMouseMove}

@@ -1,10 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { formatTimerDisplay } from "@/lib/utils";
-import { MOCK_CURRENT_USER } from "@/lib/mock-data";
-import { useTimerStore } from "@/stores/timer.store";
-import { useUIStore } from "@/stores/ui.store";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart3,
@@ -36,7 +31,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getInitials } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
+import { MOCK_CURRENT_USER } from "@/lib/mock-data";
+import { cn, formatTimerDisplay, getInitials } from "@/lib/utils";
+import { useTimerStore } from "@/stores/timer.store";
+import { useUIStore } from "@/stores/ui.store";
+import type { User as UserType } from "@/types/user";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -143,13 +143,14 @@ function TimerWidget({ collapsed }: { collapsed: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const {
     sidebarCollapsed,
     toggleSidebar,
     mobileSidebarOpen,
     setMobileSidebarOpen,
   } = useUIStore();
-  const user = MOCK_CURRENT_USER;
+  const user = (session?.user as unknown as UserType) || MOCK_CURRENT_USER;
   const isManager = user.role === "manager" || user.role === "admin";
 
   return (
@@ -360,13 +361,13 @@ export function Sidebar() {
           >
             <Avatar className="h-8 w-8 shrink-0 border border-border">
               <AvatarFallback className="bg-brand-500/10 text-xs font-semibold text-brand-500">
-                {getInitials(user.displayName)}
+                {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
-                  {user.displayName}
+                  {user.name}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {user.role}

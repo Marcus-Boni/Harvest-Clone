@@ -1,7 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getMockWeeklyHours } from "@/lib/mock-data";
 import { motion } from "framer-motion";
 import { BarChart3, PieChart, TrendingUp } from "lucide-react";
 import {
@@ -16,6 +14,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getMockWeeklyHours } from "@/lib/mock-data";
 
 const containerVariants = {
   hidden: {},

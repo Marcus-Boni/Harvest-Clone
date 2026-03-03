@@ -1,5 +1,10 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Loader2, Timer } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,32 +16,76 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2, Timer } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get("error");
+
+      if (error) {
+        if (
+          error === "unable_to_create_user" ||
+          error.includes("optsolv.com.br")
+        ) {
+          toast.error(
+            "Acesso negado. Apenas e-mails do domínio @optsolv.com.br são permitidos.",
+            {
+              id: "auth-domain-error",
+              duration: 6000,
+            },
+          );
+        } else {
+          toast.error("Ocorreu um erro na autenticação. Tente novamente.", {
+            id: "auth-generic-error",
+          });
+        }
+
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    // ARCH: Will be replaced with Better Auth login when connected
-    setTimeout(() => {
-      window.location.href = "/";
+
+    const { error } = await signIn.email({
+      email,
+      password,
+      callbackURL: "/dashboard",
+    });
+
+    if (error) {
+      toast.error(error.message || "Erro ao fazer login");
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  const handleMicrosoftLogin = () => {
+  const handleMicrosoftLogin = async () => {
     setIsLoading(true);
-    // ARCH: Will trigger Azure AD OAuth flow via Better Auth
-    setTimeout(() => {
-      window.location.href = "/";
+
+    const { error } = await signIn.social({
+      provider: "microsoft",
+      callbackURL: "/dashboard",
+    });
+
+    if (error) {
+      toast.error(error.message || "Erro ao tentar login com Microsoft");
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -104,6 +153,8 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 className="bg-background/50"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
@@ -125,6 +176,8 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                   className="bg-background/50 pr-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <Button
                   type="button"

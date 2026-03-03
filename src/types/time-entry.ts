@@ -43,7 +43,8 @@ export interface CreateTimeEntryPayload {
 }
 
 /** Payload for updating a time entry */
-export interface UpdateTimeEntryPayload extends Partial<CreateTimeEntryPayload> {
+export interface UpdateTimeEntryPayload
+  extends Partial<CreateTimeEntryPayload> {
   id: string;
 }
 

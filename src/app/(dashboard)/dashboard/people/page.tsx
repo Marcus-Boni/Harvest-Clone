@@ -1,13 +1,13 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MOCK_USERS } from "@/lib/mock-data";
 import { cn, getInitials } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { UserPlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const containerVariants = {
   hidden: {},
@@ -57,12 +57,12 @@ export default function PeoplePage() {
               <CardContent className="flex items-center gap-4 pt-5">
                 <Avatar className="h-12 w-12 border border-border">
                   <AvatarFallback className="bg-brand-500/10 font-semibold text-brand-500">
-                    {getInitials(user.displayName)}
+                    {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">
-                    {user.displayName}
+                    {user.name}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {user.email}

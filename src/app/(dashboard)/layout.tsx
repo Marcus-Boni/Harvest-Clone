@@ -1,10 +1,10 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { useUIStore } from "@/stores/ui.store";
 import { AnimatePresence, motion } from "framer-motion";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import { cn } from "@/lib/utils";
+import { useUIStore } from "@/stores/ui.store";
 
 export default function DashboardLayout({
   children,

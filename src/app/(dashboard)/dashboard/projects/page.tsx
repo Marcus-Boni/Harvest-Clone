@@ -1,14 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { Archive, Folder, Plus } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { MOCK_PROJECTS } from "@/lib/mock-data";
 import { cn, getStatusColor } from "@/lib/utils";
-import { motion } from "framer-motion";
-import { Archive, Folder, Plus } from "lucide-react";
-import Link from "next/link";
 
 const containerVariants = {
   hidden: {},

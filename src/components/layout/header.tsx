@@ -1,9 +1,8 @@
 "use client";
 
-import { MOCK_CURRENT_USER } from "@/lib/mock-data";
-import { getInitials } from "@/lib/utils";
-import { useUIStore } from "@/stores/ui.store";
 import { Menu, Moon, Plus, Search, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,11 +13,26 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Breadcrumb } from "@/components/layout/breadcrumb";
+import { signOut, useSession } from "@/lib/auth-client";
+import { MOCK_CURRENT_USER } from "@/lib/mock-data";
+import { getInitials } from "@/lib/utils";
+import { useUIStore } from "@/stores/ui.store";
 
 export function Header() {
   const { theme, toggleTheme, setMobileSidebarOpen } = useUIStore();
-  const user = MOCK_CURRENT_USER;
+  const { data: session } = useSession();
+  const user = session?.user || MOCK_CURRENT_USER;
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login");
+        },
+      },
+    });
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
@@ -94,7 +108,7 @@ export function Header() {
             >
               <Avatar className="h-8 w-8 border border-border">
                 <AvatarFallback className="bg-brand-500/10 text-xs font-semibold text-brand-500">
-                  {getInitials(user.displayName)}
+                  {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -102,9 +116,7 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {user.displayName}
-                </p>
+                <p className="text-sm font-medium leading-none">{user.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {user.email}
                 </p>
@@ -114,7 +126,10 @@ export function Header() {
             <DropdownMenuItem>Perfil</DropdownMenuItem>
             <DropdownMenuItem>Configurações</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={handleLogout}
+            >
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
