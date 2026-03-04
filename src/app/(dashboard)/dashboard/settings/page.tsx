@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Moon, Save, Sun, User } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/lib/auth-client";
-import { getInitials } from "@/lib/utils";
+
 import { useUIStore } from "@/stores/ui.store";
 import type { User as UserType } from "@/types/user";
 
@@ -57,11 +57,12 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-2 border-border">
-                <AvatarFallback className="bg-brand-500/10 text-lg font-bold text-brand-500">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={user.name}
+                image={user.image}
+                size="lg"
+                className="h-16 w-16 border-2 text-lg"
+              />
               <div>
                 <p className="font-medium text-foreground">{user.name}</p>
                 <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -71,15 +72,15 @@ export default function SettingsPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" defaultValue={user.name} />
+                <Input id="name" defaultValue={user.name} placeholder="Seu nome" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue={user.email} disabled />
+                <Input id="email" defaultValue={user.email} disabled placeholder="Seu email" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="department">Departamento</Label>
-                <Input id="department" defaultValue={user.department} />
+                <Input id="department" defaultValue={user.department} placeholder="Ex: Analista Desenvolvedor" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacity">Capacidade Semanal (h)</Label>

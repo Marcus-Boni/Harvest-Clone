@@ -1,9 +1,19 @@
 "use client";
 
-import { Menu, Moon, Plus, Search, Sun } from "lucide-react";
+import {
+  LogOut,
+  Menu,
+  Moon,
+  Plus,
+  Search,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
 import { MOCK_CURRENT_USER } from "@/lib/mock-data";
-import { getInitials } from "@/lib/utils";
+
 import { useUIStore } from "@/stores/ui.store";
 
 export function Header() {
@@ -106,11 +116,7 @@ export function Header() {
               className="relative h-9 w-9 rounded-full"
               aria-label="Menu do usuário"
             >
-              <Avatar className="h-8 w-8 border border-border">
-                <AvatarFallback className="bg-brand-500/10 text-xs font-semibold text-brand-500">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar name={user.name} image={user.image} size="default" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
@@ -123,13 +129,30 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/dashboard/profile"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Perfil
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/dashboard/settings"
+                className="flex cursor-pointer items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Configurações
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+              className="flex cursor-pointer items-center gap-2 text-destructive focus:text-destructive"
               onClick={handleLogout}
             >
+              <LogOut className="h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

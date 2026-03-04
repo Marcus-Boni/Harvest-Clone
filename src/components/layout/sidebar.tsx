@@ -20,7 +20,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useSession } from "@/lib/auth-client";
 import { MOCK_CURRENT_USER } from "@/lib/mock-data";
-import { cn, formatTimerDisplay, getInitials } from "@/lib/utils";
+import { cn, formatTimerDisplay } from "@/lib/utils";
 import { useTimerStore } from "@/stores/timer.store";
 import { useUIStore } from "@/stores/ui.store";
 import type { User as UserType } from "@/types/user";
@@ -152,7 +152,7 @@ export function Sidebar() {
     mobileSidebarOpen,
     setMobileSidebarOpen,
   } = useUIStore();
-  const user = (session?.user as unknown as UserType) || MOCK_CURRENT_USER;
+  const user: UserType = (session?.user as unknown as UserType) || MOCK_CURRENT_USER;
   const isManager = user.role === "manager" || user.role === "admin";
 
   return (
@@ -366,11 +366,7 @@ export function Sidebar() {
               sidebarCollapsed && "justify-center px-0",
             )}
           >
-            <Avatar className="h-8 w-8 shrink-0 border border-border">
-              <AvatarFallback className="bg-brand-500/10 text-xs font-semibold text-brand-500">
-                {getInitials(user.name)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar name={user.name} image={user.image} size="default" />
             {!sidebarCollapsed && (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">

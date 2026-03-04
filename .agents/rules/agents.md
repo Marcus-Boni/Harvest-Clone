@@ -13,7 +13,7 @@ trigger: always_on
 ## 1. Identidade do Projeto
 
 **OptSolv Time Tracker** — sistema interno de registro e gestão de horas de trabalho.
-Stack: Next.js 16 App Router · TypeScript strict · TailwindCSS v4 · shadcn/ui · Better Auth · Neon + Drizzle ORM · Zustand · Framer Motion.
+Stack: Next.js 16 App Router · TypeScript strict · TailwindCSS v4 · shadcn/ui · Better Auth · Neon + Drizzle ORM · Zustand · Framer Motion · Biome.
 Referência de PRD completo: `PRD.md` na raiz do projeto.
 
 ---

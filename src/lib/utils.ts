@@ -100,6 +100,33 @@ export function getInitials(name: string): string {
 }
 
 /**
+ * Resolve a user's profile image source.
+ *
+ * Microsoft OAuth can return the profile photo as a base64 data URI
+ * (e.g. "data:image/jpeg;base64,..."). next/image does NOT support data URIs,
+ * so callers must check `isBase64Image()` and render a plain <img> instead.
+ *
+ * Returns `null` when no image is available so the caller can show initials.
+ */
+export function resolveUserImage(
+  image: string | null | undefined,
+): string | null {
+  if (!image || image.trim() === "") return null;
+  return image.trim();
+}
+
+/**
+ * Returns true when the image string is a base64 data URI.
+ * In this case, use a native <img> element — not next/image.
+ *
+ * @example isBase64Image("data:image/jpeg;base64,/9j/...") // true
+ * @example isBase64Image("https://graph.microsoft.com/...") // false
+ */
+export function isBase64Image(src: string | null | undefined): boolean {
+  return typeof src === "string" && src.startsWith("data:");
+}
+
+/**
  * Get a tailwind-friendly color for project status badges.
  */
 export function getStatusColor(status: string): string {
