@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+
 import {
   Bar,
   BarChart,
@@ -68,6 +71,19 @@ export default function DashboardPage() {
   const timerStore = useTimerStore();
   const { data: session } = useSession();
   const user = session?.user || MOCK_CURRENT_USER;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("error") === "forbidden") {
+      toast.error("Acesso restrito", {
+        description: "Você não tem permissão para acessar essa área.",
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      router.replace(url.pathname);
+    }
+  }, [searchParams, router]);
 
   const recentEntries = MOCK_TIME_ENTRIES.filter(
     (e) => e.userId === "user-1",

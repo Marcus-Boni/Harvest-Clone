@@ -25,13 +25,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
 import { MOCK_CURRENT_USER } from "@/lib/mock-data";
-
 import { useUIStore } from "@/stores/ui.store";
+import type { User as UserType } from "@/types/user";
 
 export function Header() {
   const { theme, toggleTheme, setMobileSidebarOpen } = useUIStore();
-  const { data: session } = useSession();
-  const user = session?.user || MOCK_CURRENT_USER;
+  const { data: session, isPending } = useSession();
+  const user = isPending
+    ? null
+    : ((session?.user as unknown as UserType) ?? null);
+  const isManager =
+    !isPending && (user?.role === "manager" || user?.role === "admin");
+  const currentUser = user || MOCK_CURRENT_USER;
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -116,15 +121,21 @@ export function Header() {
               className="relative h-9 w-9 rounded-full"
               aria-label="Menu do usuário"
             >
-              <UserAvatar name={user.name} image={user.image} size="default" />
+              <UserAvatar
+                name={currentUser.name}
+                image={currentUser.image}
+                size="default"
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-sm font-medium leading-none">
+                  {currentUser.name}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  {user.email}
+                  {currentUser.email}
                 </p>
               </div>
             </DropdownMenuLabel>
@@ -138,15 +149,17 @@ export function Header() {
                 Perfil
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href="/dashboard/settings"
-                className="flex cursor-pointer items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Configurações
-              </Link>
-            </DropdownMenuItem>
+            {isManager && (
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/settings"
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configurações
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="flex cursor-pointer items-center gap-2 text-destructive focus:text-destructive"

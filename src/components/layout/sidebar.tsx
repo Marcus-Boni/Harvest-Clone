@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -32,7 +33,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "@/lib/auth-client";
-import { MOCK_CURRENT_USER } from "@/lib/mock-data";
 import { cn, formatTimerDisplay } from "@/lib/utils";
 import { useTimerStore } from "@/stores/timer.store";
 import { useUIStore } from "@/stores/ui.store";
@@ -145,15 +145,19 @@ function TimerWidget({ collapsed }: { collapsed: boolean }) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const {
     sidebarCollapsed,
     toggleSidebar,
     mobileSidebarOpen,
     setMobileSidebarOpen,
   } = useUIStore();
-  const user: UserType = (session?.user as unknown as UserType) || MOCK_CURRENT_USER;
-  const isManager = user.role === "manager" || user.role === "admin";
+  // Nunca usa MOCK durante loading — evita renderizar itens de gestão antes da sessão resolver
+  const user: UserType | null = isPending
+    ? null
+    : ((session?.user as unknown as UserType) ?? null);
+  const isManager =
+    !isPending && (user?.role === "manager" || user?.role === "admin");
 
   return (
     <TooltipProvider>
@@ -183,12 +187,14 @@ export function Sidebar() {
         {/* Logo */}
         <div
           className={cn(
-            "flex h-16 items-center border-b border-border px-4",
-            sidebarCollapsed ? "justify-center" : "justify-between",
+            "relative flex h-16 items-center px-4",
+            sidebarCollapsed
+              ? "justify-center"
+              : "justify-between border-b border-border",
           )}
         >
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 shadow-lg shadow-brand-500/20">
               <Image
                 src="/logo-white.svg"
                 alt="OptSolv Logo"
@@ -214,20 +220,25 @@ export function Sidebar() {
             )}
           </Link>
 
-          {/* Collapse button — desktop only */}
+          {/* Toggle Button — Floating on the border for better symmetry and usability */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="hidden h-7 w-7 lg:flex"
             onClick={toggleSidebar}
+            className={cn(
+              "absolute z-50 hidden h-6 w-6 rounded-full border border-border bg-sidebar p-0 shadow-sm transition-all hover:bg-accent lg:flex",
+              sidebarCollapsed
+                ? "-right-3 top-1/2 -translate-y-1/2"
+                : "relative right-0 translate-x-0",
+            )}
             aria-label={
               sidebarCollapsed ? "Expandir sidebar" : "Colapsar sidebar"
             }
           >
             {sidebarCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
             )}
           </Button>
         </div>
@@ -358,26 +369,46 @@ export function Sidebar() {
           )}
         </ScrollArea>
 
-        {/* User profile at bottom */}
         <div className="border-t border-border p-3">
-          <div
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent",
-              sidebarCollapsed && "justify-center px-0",
-            )}
-          >
-            <UserAvatar name={user.name} image={user.image} size="default" />
-            {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {user.name}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {user.role}
-                </p>
-              </div>
-            )}
-          </div>
+          {isPending ? (
+            <div
+              className={cn(
+                "flex items-center gap-3 px-2 py-2",
+                sidebarCollapsed && "justify-center px-0",
+              )}
+            >
+              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+              {!sidebarCollapsed && (
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3 w-24 rounded" />
+                  <Skeleton className="h-3 w-16 rounded" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent",
+                sidebarCollapsed && "justify-center px-0",
+              )}
+            >
+              <UserAvatar
+                name={user?.name ?? ""}
+                image={user?.image}
+                size="default"
+              />
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {user?.name}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user?.role}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </aside>
     </TooltipProvider>
