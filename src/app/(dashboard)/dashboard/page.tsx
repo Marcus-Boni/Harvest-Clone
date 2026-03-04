@@ -21,6 +21,7 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -29,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { useChartColors } from "@/hooks/use-chart-colors";
 import { useSession } from "@/lib/auth-client";
 import {
   getMockTodayHours,
@@ -44,6 +46,7 @@ import {
   getStatusColor,
 } from "@/lib/utils";
 import { useTimerStore } from "@/stores/timer.store";
+import { useUIStore } from "@/stores/ui.store";
 
 const containerVariants = {
   hidden: {},
@@ -73,6 +76,8 @@ export default function DashboardPage() {
   const user = session?.user || MOCK_CURRENT_USER;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const theme = useUIStore((s) => s.theme);
+  const chartColors = useChartColors();
 
   useEffect(() => {
     if (searchParams.get("error") === "forbidden") {
@@ -203,8 +208,8 @@ export default function DashboardPage() {
               </CardTitle>
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500/10">
                 <Image
-                  src="/logo-white.svg"
-                  alt="Logo"
+                  src={theme === "dark" ? "/logo-white.svg" : "/logo-black.svg"}
+                  alt="Logo OptSolv"
                   width={11}
                   height={16}
                 />
@@ -269,28 +274,30 @@ export default function DashboardPage() {
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="rgba(255,255,255,0.05)"
+                      stroke={chartColors.gridStroke}
                     />
                     <XAxis
                       dataKey="day"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "#a3a3a3" }}
+                      tick={{ fontSize: 12, fill: chartColors.tickFill }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "#a3a3a3" }}
+                      tick={{ fontSize: 12, fill: chartColors.tickFill }}
                       domain={[0, 10]}
                     />
                     <RechartsTooltip
                       contentStyle={{
-                        backgroundColor: "#171717",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        backgroundColor: chartColors.tooltipBg,
+                        border: `1px solid ${chartColors.tooltipBorder}`,
                         borderRadius: "8px",
-                        fontSize: "12px",
+                        color: chartColors.tooltipColor,
                       }}
-                      cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                      itemStyle={{ color: chartColors.tooltipColor }}
+                      labelStyle={{ color: chartColors.tooltipLabelColor }}
+                      cursor={{ fill: chartColors.cursorFill }}
                     />
                     <Bar
                       dataKey="hours"
@@ -300,7 +307,7 @@ export default function DashboardPage() {
                     />
                     <Bar
                       dataKey="target"
-                      fill="rgba(255,255,255,0.05)"
+                      fill={chartColors.ghostBarFill}
                       radius={[6, 6, 0, 0]}
                       name="Meta"
                     />

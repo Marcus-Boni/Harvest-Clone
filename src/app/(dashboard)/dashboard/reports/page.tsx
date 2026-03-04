@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChartColors } from "@/hooks/use-chart-colors";
 import { getMockWeeklyHours } from "@/lib/mock-data";
 
 const containerVariants = {
@@ -35,6 +36,7 @@ const projectDistribution = [
 
 export default function ReportsPage() {
   const weeklyData = getMockWeeklyHours();
+  const chartColors = useChartColors();
 
   return (
     <motion.div
@@ -99,25 +101,29 @@ export default function ReportsPage() {
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
-                      stroke="rgba(255,255,255,0.05)"
+                      stroke={chartColors.gridStroke}
                     />
                     <XAxis
                       dataKey="day"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "#a3a3a3" }}
+                      tick={{ fontSize: 12, fill: chartColors.tickFill }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 12, fill: "#a3a3a3" }}
+                      tick={{ fontSize: 12, fill: chartColors.tickFill }}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#171717",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        backgroundColor: chartColors.tooltipBg,
+                        border: `1px solid ${chartColors.tooltipBorder}`,
                         borderRadius: "8px",
+                        color: chartColors.tooltipColor,
                       }}
+                      itemStyle={{ color: chartColors.tooltipColor }}
+                      labelStyle={{ color: chartColors.tooltipLabelColor }}
+                      cursor={{ fill: chartColors.cursorFill }}
                     />
                     <Bar
                       dataKey="hours"
@@ -152,6 +158,23 @@ export default function ReportsPage() {
                       outerRadius={90}
                       paddingAngle={4}
                       dataKey="value"
+                      label={({ name, percent, x, y, cx }) => {
+                        const val = typeof percent === "number" ? percent : 0;
+                        return (
+                          <text
+                            x={x}
+                            y={y}
+                            fill={chartColors.pieLabelFill}
+                            textAnchor={x > cx ? "start" : "end"}
+                            dominantBaseline="central"
+                            fontSize={12}
+                            fontWeight="500"
+                          >
+                            {`${name} ${(val * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
+                      labelLine={false}
                     >
                       {projectDistribution.map((entry) => (
                         <Cell key={entry.name} fill={entry.color} />
@@ -159,10 +182,13 @@ export default function ReportsPage() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#171717",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        backgroundColor: chartColors.tooltipBg,
+                        border: `1px solid ${chartColors.tooltipBorder}`,
                         borderRadius: "8px",
+                        color: chartColors.tooltipColor,
                       }}
+                      itemStyle={{ color: chartColors.tooltipColor }}
+                      labelStyle={{ color: chartColors.tooltipLabelColor }}
                     />
                   </RechartsPie>
                 </ResponsiveContainer>

@@ -1,7 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, JetBrains_Mono, Sora } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/providers/theme-provider";
 import "./globals.css";
+
+const themeScript = `
+  try {
+    var stored = JSON.parse(localStorage.getItem('optsolv-ui') || '{}');
+    var theme = stored.state && stored.state.theme ? stored.state.theme : 'dark';
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  } catch (_) {
+    document.documentElement.classList.add('dark');
+  }
+`;
 
 const sora = Sora({
   variable: "--font-sora",
@@ -36,7 +47,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#f97316",
-  colorScheme: "dark",
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({
@@ -45,23 +56,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="dark" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/* Blocking script — runs before first paint to prevent theme FOUC */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: safe — content is a hardcoded literal string, no user input */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
-        {children}
-        <Toaster
-          position="bottom-right"
-          richColors
-          closeButton
-          toastOptions={{
-            classNames: {
-              toast: "bg-card border-border",
-              title: "text-foreground",
-              description: "text-muted-foreground",
-            },
-          }}
-        />
+        <ThemeProvider>
+          {children}
+          <Toaster
+            position="bottom-right"
+            richColors
+            closeButton
+            toastOptions={{
+              classNames: {
+                toast: "bg-card border-border",
+                title: "text-foreground",
+                description: "text-muted-foreground",
+              },
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );
