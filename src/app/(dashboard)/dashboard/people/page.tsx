@@ -4,22 +4,10 @@ import { motion } from "framer-motion";
 import { Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import InviteUserDialog from "@/components/people/InviteUserDialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import PersonCard, { type PersonData } from "@/components/people/PersonCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
-import { cn, getInitials } from "@/lib/utils";
-
-interface PersonData {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  department: string | null;
-  isActive: boolean;
-  weeklyCapacity: number;
-}
 
 const containerVariants = {
   hidden: {},
@@ -28,18 +16,6 @@ const containerVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-};
-
-const roleColors: Record<string, string> = {
-  admin: "bg-purple-500/10 text-purple-400",
-  manager: "bg-blue-500/10 text-blue-400",
-  member: "bg-muted text-muted-foreground",
-};
-
-const roleLabels: Record<string, string> = {
-  admin: "Admin",
-  manager: "Gerente",
-  member: "Membro",
 };
 
 function PeopleCardSkeleton() {
@@ -173,63 +149,14 @@ export default function PeoplePage() {
       {!isLoading && !error && people.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {people.map((person, i) => (
-            <motion.div
+            <PersonCard
               key={person.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: i * 0.06 }}
-            >
-              <Card className="border-border/50 bg-card/80 backdrop-blur transition-colors hover:border-border/80">
-                <CardContent className="flex items-center gap-4 pt-5">
-                  <Avatar className="h-12 w-12 border border-border">
-                    <AvatarFallback
-                      className={cn(
-                        "font-semibold",
-                        person.isActive
-                          ? "bg-brand-500/10 text-brand-500"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {getInitials(person.name || "?")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {person.name || "Usuário"}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {person.email}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <Badge
-                        className={cn(
-                          "text-[10px]",
-                          roleColors[person.role] ||
-                            "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {roleLabels[person.role] ?? person.role}
-                      </Badge>
-                      {person.id === sessionUserId && (
-                        <Badge className="text-[10px] bg-brand-500/10 text-brand-500 hover:bg-brand-500/20">
-                          Você
-                        </Badge>
-                      )}
-                      {!person.isActive && (
-                        <Badge className="text-[10px] bg-muted text-muted-foreground">
-                          Inativo
-                        </Badge>
-                      )}
-                      {person.department && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {person.department}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              person={person}
+              sessionUserId={sessionUserId}
+              sessionRole={sessionRole}
+              index={i}
+              onUpdate={() => void fetchPeople()}
+            />
           ))}
         </div>
       )}
