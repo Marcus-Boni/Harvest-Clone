@@ -13,7 +13,8 @@ export const projectSchema = z.object({
     .regex(
       /^[A-Z0-9-]+$/,
       "Código deve conter apenas letras maiúsculas, números e hífens",
-    ),
+    )
+    .optional(),
   clientName: z.string().optional(),
   description: z.string().max(500).optional(),
   color: z
@@ -23,7 +24,7 @@ export const projectSchema = z.object({
   budget: z.number().min(0).optional(),
   azureProjectId: z.string().optional(),
   memberIds: z.array(z.string()).default([]),
-  managerId: z.string().min(1, "Selecione um manager"),
+  managerId: z.string().optional(),
 });
 
 export type ProjectFormData = z.infer<typeof projectSchema>;

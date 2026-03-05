@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { MoreHorizontal, Trash2, UserCheck, UserX } from "lucide-react";
+import { MoreHorizontal, Trash2, UserCheck, UserX, FolderKanban } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import ManageProjectsDialog from "@/components/people/ManageProjectsDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +67,7 @@ export default function PersonCard({
 }: PersonCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isManageProjectsOpen, setIsManageProjectsOpen] = useState(false);
 
   const canManage = sessionRole === "admin" || sessionRole === "manager";
   const isSelf = person.id === sessionUserId;
@@ -230,6 +232,18 @@ export default function PersonCard({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel className="text-xs">
+                    Ações
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setIsManageProjectsOpen(true)}
+                    className="text-xs"
+                  >
+                    <FolderKanban className="mr-2 h-3.5 w-3.5" />
+                    Gerenciar Projetos
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs">
                     Cargo
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -338,6 +352,13 @@ export default function PersonCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ManageProjectsDialog
+        open={isManageProjectsOpen}
+        onOpenChange={setIsManageProjectsOpen}
+        userId={person.id}
+        userName={person.name || "Usuário"}
+      />
     </>
   );
 }

@@ -20,6 +20,7 @@ const segmentLabels: Record<string, string> = {
   "azure-devops": "Azure DevOps",
   profile: "Perfil",
   settings: "Configurações",
+  new: "Novo",
 };
 
 export function Breadcrumb() {

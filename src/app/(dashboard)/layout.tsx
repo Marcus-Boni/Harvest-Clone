@@ -14,7 +14,7 @@ export default function DashboardLayout({
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="fixed inset-0 flex overflow-hidden bg-background">
       {/* Sidebar */}
       <Sidebar />
 
@@ -22,7 +22,7 @@ export default function DashboardLayout({
       <div
         className={cn(
           "flex flex-1 flex-col overflow-hidden transition-all duration-300",
-          sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[260px]",
+          sidebarCollapsed ? "lg:ml-18" : "lg:ml-65",
         )}
       >
         <Header />

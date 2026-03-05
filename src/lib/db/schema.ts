@@ -94,6 +94,8 @@ export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   accounts: many(account),
   invitationsSent: many(invitation, { relationName: "inviter" }),
+  managedProjects: many(project),
+  projectMemberships: many(projectMember),
   azureDevopsConfig: one(azureDevopsConfig, {
     fields: [user.id],
     references: [azureDevopsConfig.userId],
@@ -144,6 +146,81 @@ export const invitationRelations = relations(invitation, ({ one }) => ({
   }),
 }));
 
+// ─── Project ───────────────────────────────────────────────────────────
+export type ProjectStatus = "active" | "archived" | "completed";
+export type ProjectSource = "manual" | "azure-devops";
+
+export const project = pgTable(
+  "project",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    code: text("code").notNull().unique(),
+    description: text("description"),
+    clientName: text("client_name"),
+    color: text("color").notNull().default("#6366f1"),
+    status: text("status").notNull().default("active"),
+    billable: boolean("billable").notNull().default(true),
+    /** Budget in hours */
+    budget: integer("budget"),
+    /** Origin of the project: manually created or imported from Azure DevOps */
+    source: text("source").notNull().default("manual"),
+    /** Azure DevOps project ID (set when imported or linked) */
+    azureProjectId: text("azure_project_id"),
+    /** Direct link to the Azure DevOps project */
+    azureProjectUrl: text("azure_project_url"),
+    managerId: text("manager_id").references(() => user.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("project_status_idx").on(table.status),
+    index("project_azure_id_idx").on(table.azureProjectId),
+    index("project_manager_idx").on(table.managerId),
+  ],
+);
+
+export const projectMember = pgTable(
+  "project_member",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => project.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("project_member_project_idx").on(table.projectId),
+    index("project_member_user_idx").on(table.userId),
+  ],
+);
+
+export const projectRelations = relations(project, ({ one, many }) => ({
+  manager: one(user, {
+    fields: [project.managerId],
+    references: [user.id],
+  }),
+  members: many(projectMember),
+}));
+
+export const projectMemberRelations = relations(projectMember, ({ one }) => ({
+  project: one(project, {
+    fields: [projectMember.projectId],
+    references: [project.id],
+  }),
+  user: one(user, {
+    fields: [projectMember.userId],
+    references: [user.id],
+  }),
+}));
+
+// ─── Azure DevOps Config ──────────────────────────────────────────────
 export const azureDevopsConfig = pgTable("azure_devops_config", {
   id: text("id").primaryKey(),
   userId: text("user_id")
