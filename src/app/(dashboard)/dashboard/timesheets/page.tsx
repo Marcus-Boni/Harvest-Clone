@@ -1,10 +1,10 @@
 "use client";
 
 import { format, getISOWeek } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { ArrowRight, Send } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { TimesheetStatusBadge } from "@/components/timesheets/TimesheetStatusBadge";
 import { Button } from "@/components/ui/button";
@@ -23,9 +23,11 @@ const itemVariants = {
 };
 
 export default function TimesheetsPage() {
+  const router = useRouter();
   const { timesheets, loading, getOrCreateTimesheet, submitTimesheet } =
     useTimesheets();
   const [submitting, setSubmitting] = useState<string | null>(null);
+  const [openingCurrentWeek, setOpeningCurrentWeek] = useState(false);
 
   // Now the current week's timesheet is automatically created and returned by the API
   const currentPeriod = `${format(new Date(), "yyyy")}-W${getISOWeek(new Date()).toString().padStart(2, "0")}`;
@@ -63,9 +65,14 @@ export default function TimesheetsPage() {
 
   // Get-or-create the current week's timesheet and navigate to it
   const handleOpenCurrentWeek = useCallback(async () => {
-    const period = currentPeriod;
-    await getOrCreateTimesheet(period, "weekly");
-  }, [getOrCreateTimesheet, currentPeriod]);
+    setOpeningCurrentWeek(true);
+    try {
+      const timesheet = await getOrCreateTimesheet(currentPeriod, "weekly");
+      router.push(`/dashboard/timesheets/${timesheet.id}`);
+    } finally {
+      setOpeningCurrentWeek(false);
+    }
+  }, [getOrCreateTimesheet, currentPeriod, router]);
 
   const handleSubmit = useCallback(
     async (id: string) => {
@@ -100,9 +107,10 @@ export default function TimesheetsPage() {
         </div>
         <Button
           className="bg-brand-500 text-white hover:bg-brand-600"
+          disabled={openingCurrentWeek}
           onClick={handleOpenCurrentWeek}
         >
-          Semana Atual
+          {openingCurrentWeek ? "Abrindo…" : "Semana Atual"}
         </Button>
       </motion.div>
 

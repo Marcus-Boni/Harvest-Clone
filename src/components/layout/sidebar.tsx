@@ -180,7 +180,7 @@ export function Sidebar() {
       : item,
   );
 
- return (
+  return (
     <TooltipProvider>
       {/* Mobile overlay */}
       <AnimatePresence>
@@ -264,131 +264,133 @@ export function Sidebar() {
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 py-3">
-          {/* Active Timer Widget */}
-          <TimerWidget collapsed={sidebarCollapsed} />
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <ScrollArea className="h-full py-3">
+            {/* Active Timer Widget */}
+            <TimerWidget collapsed={sidebarCollapsed} />
 
-          {/* Main Navigation */}
-          <nav className="px-2" aria-label="Navegação principal">
-            <ul className="space-y-1">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                const linkContent = (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      isActive
-                        ? "bg-brand-500/10 text-brand-500"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                      sidebarCollapsed && "justify-center px-2",
-                    )}
-                    aria-current={isActive ? "page" : undefined}
-                  >
-                    <item.icon
+            {/* Main Navigation */}
+            <nav className="px-2" aria-label="Navegação principal">
+              <ul className="space-y-1">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  const linkContent = (
+                    <Link
+                      href={item.href}
                       className={cn(
-                        "h-5 w-5 shrink-0",
-                        isActive ? "text-brand-500" : "",
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-brand-500/10 text-brand-500"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        sidebarCollapsed && "justify-center px-2",
                       )}
-                    />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1">{item.name}</span>
-                        {item.badge && (
-                          <Badge
-                            variant="secondary"
-                            className="h-5 min-w-5 justify-center bg-brand-500 px-1.5 text-[10px] font-bold text-white"
-                          >
-                            {item.badge}
-                          </Badge>
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      <item.icon
+                        className={cn(
+                          "h-5 w-5 shrink-0",
+                          isActive ? "text-brand-500" : "",
                         )}
-                      </>
-                    )}
-                  </Link>
-                );
-
-                return (
-                  <li key={item.href}>
-                    {sidebarCollapsed ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                        <TooltipContent side="right">
-                          <span>{item.name}</span>
+                      />
+                      {!sidebarCollapsed && (
+                        <>
+                          <span className="flex-1">{item.name}</span>
                           {item.badge && (
-                            <Badge className="ml-2 h-4 bg-brand-500 text-[10px] text-white">
+                            <Badge
+                              variant="secondary"
+                              className="h-5 min-w-5 justify-center bg-brand-500 px-1.5 text-[10px] font-bold text-white"
+                            >
                               {item.badge}
                             </Badge>
                           )}
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      linkContent
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+                        </>
+                      )}
+                    </Link>
+                  );
 
-          {/* Manager / Admin Section */}
-          {isManager && (
-            <>
-              <Separator className="mx-4 my-3" />
-              {!sidebarCollapsed && (
-                <p className="px-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-                  Gestão
-                </p>
-              )}
-              <nav className="mt-1 px-2" aria-label="Navegação de gestão">
-                <ul className="space-y-1">
-                  {managementNav.map((item) => {
-                    const isActive =
-                      pathname === item.href ||
-                      pathname.startsWith(item.href + "/");
-                    const linkContent = (
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                          isActive
-                            ? "bg-brand-500/10 text-brand-500"
-                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                          sidebarCollapsed && "justify-center px-2",
-                        )}
-                        aria-current={isActive ? "page" : undefined}
-                      >
-                        <item.icon
+                  return (
+                    <li key={item.href}>
+                      {sidebarCollapsed ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                          <TooltipContent side="right">
+                            <span>{item.name}</span>
+                            {item.badge && (
+                              <Badge className="ml-2 h-4 bg-brand-500 text-[10px] text-white">
+                                {item.badge}
+                              </Badge>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        linkContent
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* Manager / Admin Section */}
+            {isManager && (
+              <>
+                <Separator className="mx-4 my-3" />
+                {!sidebarCollapsed && (
+                  <p className="px-5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+                    Gestão
+                  </p>
+                )}
+                <nav className="mt-1 px-2" aria-label="Navegação de gestão">
+                  <ul className="space-y-1">
+                    {managementNav.map((item) => {
+                      const isActive =
+                        pathname === item.href ||
+                        pathname.startsWith(item.href + "/");
+                      const linkContent = (
+                        <Link
+                          href={item.href}
                           className={cn(
-                            "h-5 w-5 shrink-0",
-                            isActive ? "text-brand-500" : "",
+                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                            isActive
+                              ? "bg-brand-500/10 text-brand-500"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                            sidebarCollapsed && "justify-center px-2",
                           )}
-                        />
-                        {!sidebarCollapsed && <span>{item.name}</span>}
-                      </Link>
-                    );
+                          aria-current={isActive ? "page" : undefined}
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-5 w-5 shrink-0",
+                              isActive ? "text-brand-500" : "",
+                            )}
+                          />
+                          {!sidebarCollapsed && <span>{item.name}</span>}
+                        </Link>
+                      );
 
-                    return (
-                      <li key={item.href}>
-                        {sidebarCollapsed ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {linkContent}
-                            </TooltipTrigger>
-                            <TooltipContent side="right">
-                              {item.name}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          linkContent
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </nav>
-            </>
-          )}
-        </ScrollArea>
+                      return (
+                        <li key={item.href}>
+                          {sidebarCollapsed ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {linkContent}
+                              </TooltipTrigger>
+                              <TooltipContent side="right">
+                                {item.name}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            linkContent
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+              </>
+            )}
+          </ScrollArea>
+        </div>
 
         <div className="border-t border-border p-3">
           {isPending ? (
