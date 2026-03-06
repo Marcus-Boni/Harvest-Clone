@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { cn } from "@/lib/utils";
@@ -13,12 +14,14 @@ export default function DashboardLayout({
 }) {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
+  useEffect(() => {
+    useUIStore.persist.rehydrate();
+  }, []);
+
   return (
     <div className="fixed inset-0 flex overflow-hidden bg-background">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main content */}
       <div
         className={cn(
           "flex flex-1 flex-col overflow-hidden transition-all duration-300",

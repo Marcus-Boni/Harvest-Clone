@@ -48,6 +48,12 @@ export const useUIStore = create<UIState & UIActions>()(
         sidebarCollapsed: state.sidebarCollapsed,
         theme: state.theme,
       }),
+      // Prevent SSR/client hydration mismatch: persisted values (theme, sidebar)
+      // differ from server defaults, which shifts React's useId() counter and
+      // causes Radix UI IDs to differ. skipHydration keeps the default values
+      // during SSR and the first client render; rehydrate() is called in a
+      // useEffect after React hydration completes.
+      skipHydration: true,
     },
   ),
 );
