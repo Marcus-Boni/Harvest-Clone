@@ -11,8 +11,10 @@ interface TimeEntryRow {
   azureWorkItemTitle?: string | null;
 }
 
-function minutesToHours(minutes: number): number {
-  return Math.round((minutes / 60) * 100) / 100;
+function minutesToHours(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}min`;
 }
 
 /**
@@ -45,7 +47,7 @@ export function exportTimeEntriesToExcel(
     Projeto: "",
     Descrição: "TOTAL",
     Horas: totalHours,
-    Faturável: `${billableHours}h faturável`,
+    Faturável: `${billableHours} faturável`,
     Status: "",
     "Work Item ID": "",
     "Work Item Título": "",
@@ -76,24 +78,56 @@ export function exportTimeEntriesToExcel(
  */
 export function exportSummaryByProjectToExcel(
   projectData: {
-    name: string;
+    projectName: string;
     totalMinutes: number;
     billableMinutes: number;
+    entryCount: number;
   }[],
-  filename = "resumo-projetos",
+  {
+    filename = "resumo-projetos",
+    period,
+    totalMinutes,
+    billableMinutes,
+  }: {
+    filename?: string;
+    period?: string;
+    totalMinutes?: number;
+    billableMinutes?: number;
+  } = {},
 ) {
-  const rows = projectData.map((p) => ({
-    Projeto: p.name,
+  const rows: Record<string, string | number>[] = projectData.map((p) => ({
+    Projeto: p.projectName,
     "Total (h)": minutesToHours(p.totalMinutes),
     "Faturável (h)": minutesToHours(p.billableMinutes),
     "Não Faturável (h)": minutesToHours(p.totalMinutes - p.billableMinutes),
+    Lançamentos: p.entryCount,
   }));
 
+  // Totals row
+  const grandTotal =
+    totalMinutes ?? projectData.reduce((s, p) => s + p.totalMinutes, 0);
+  const grandBillable =
+    billableMinutes ?? projectData.reduce((s, p) => s + p.billableMinutes, 0);
+  rows.push({
+    Projeto: "TOTAL",
+    "Total (h)": minutesToHours(grandTotal),
+    "Faturável (h)": minutesToHours(grandBillable),
+    "Não Faturável (h)": minutesToHours(grandTotal - grandBillable),
+    Lançamentos: projectData.reduce((s, p) => s + p.entryCount, 0),
+  });
+
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 14 }, { wch: 16 }];
+  ws["!cols"] = [
+    { wch: 32 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 18 },
+    { wch: 14 },
+  ];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Resumo por Projeto");
+  const sheetName = period ? `Resumo ${period}` : "Resumo por Projeto";
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 

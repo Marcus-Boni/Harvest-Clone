@@ -34,14 +34,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartColors } from "@/hooks/use-chart-colors";
-import {
-  exportSummaryByProjectToExcel,
-  exportTimeEntriesToExcel,
-} from "@/lib/export/excel";
-import {
-  exportSummaryByProjectToPDF,
-  exportTimeEntriesToPDF,
-} from "@/lib/export/pdf";
+import { exportSummaryByProjectToExcel } from "@/lib/export/excel";
+import { exportSummaryByProjectToPDF } from "@/lib/export/pdf";
 
 const containerVariants = {
   hidden: {},
@@ -129,34 +123,44 @@ export default function ReportsPage() {
 
   const { from, to, label } = getRangeDates(range);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [dayRes, projRes] = await Promise.all([
-        fetch(`/api/time-entries/summary?groupBy=day&from=${from}&to=${to}`),
-        fetch(
-          `/api/time-entries/summary?groupBy=project&from=${from}&to=${to}`,
-        ),
-      ]);
-      const dayData = dayRes.ok
-        ? await dayRes.json()
-        : { data: [], totals: { totalMinutes: 0, billableMinutes: 0 } };
-      const projData = projRes.ok
-        ? await projRes.json()
-        : { data: [], totals: { totalMinutes: 0 } };
-      setDaySummaries(dayData.data ?? []);
-      setProjectSummaries(projData.data ?? []);
-      setTotalMinutes(dayData.totals?.totalMinutes ?? 0);
-      setBillableMinutes(dayData.totals?.billableMinutes ?? 0);
-    } catch {
-      /* noop */
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to]);
+  const fetchData = useCallback(
+    async (signal: AbortSignal) => {
+      setLoading(true);
+      try {
+        const [dayRes, projRes] = await Promise.all([
+          fetch(`/api/time-entries/summary?groupBy=day&from=${from}&to=${to}`, {
+            signal,
+          }),
+          fetch(
+            `/api/time-entries/summary?groupBy=project&from=${from}&to=${to}`,
+            { signal },
+          ),
+        ]);
+        if (signal.aborted) return;
+        const dayData = dayRes.ok
+          ? await dayRes.json()
+          : { data: [], totals: { totalMinutes: 0, billableMinutes: 0 } };
+        const projData = projRes.ok
+          ? await projRes.json()
+          : { data: [], totals: { totalMinutes: 0 } };
+        if (signal.aborted) return;
+        setDaySummaries(dayData.data ?? []);
+        setProjectSummaries(projData.data ?? []);
+        setTotalMinutes(dayData.totals?.totalMinutes ?? 0);
+        setBillableMinutes(dayData.totals?.billableMinutes ?? 0);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return;
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    },
+    [from, to],
+  );
 
   useEffect(() => {
-    fetchData();
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
   }, [fetchData]);
 
   // Bar chart: minutes per day → hours
@@ -177,7 +181,8 @@ export default function ReportsPage() {
     daySummaries.length > 0
       ? Math.round(
           daySummaries.reduce((sum, d) => sum + Number(d.totalMinutes), 0) /
-            (daySummaries.filter((d) => Number(d.totalMinutes) > 0).length || 1),
+            (daySummaries.filter((d) => Number(d.totalMinutes) > 0).length ||
+              1),
         )
       : 0;
 
@@ -185,15 +190,7 @@ export default function ReportsPage() {
     (p) => p.totalMinutes > 0,
   ).length;
 
-  async function handleExportExcel() {
-    const entries = daySummaries.map((d) => ({
-      date: d.date,
-      project: "",
-      description: "",
-      duration: minutesToHours(d.totalMinutes),
-      billable: true,
-      status: "approved" as const,
-    }));
+  function handleExportExcel() {
     exportSummaryByProjectToExcel(
       projectSummaries.map((p) => ({
         projectName: p.projectName,
@@ -201,11 +198,16 @@ export default function ReportsPage() {
         billableMinutes: p.billableMinutes,
         entryCount: p.entryCount,
       })),
-      `relatorio-${from}-${to}.xlsx`,
+      {
+        filename: `relatorio-${from}-${to}`,
+        period: label,
+        totalMinutes,
+        billableMinutes,
+      },
     );
   }
 
-  async function handleExportPDF() {
+  function handleExportPDF() {
     exportSummaryByProjectToPDF({
       projectData: projectSummaries.map((p) => ({
         projectName: p.projectName,
@@ -215,7 +217,9 @@ export default function ReportsPage() {
       })),
       title: "Relatório de Horas",
       period: label,
-      filename: `relatorio-${from}-${to}.pdf`,
+      filename: `relatorio-${from}-${to}`,
+      totalMinutes,
+      billableMinutes,
     });
   }
 
@@ -277,25 +281,28 @@ export default function ReportsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           {
+            id: "total",
             label: label,
             value: loading ? null : minutesToHours(totalMinutes),
             icon: BarChart3,
-            sub: `${minutesToHours(billableMinutes)} faturáveis`,
+            sub: loading ? "" : `${minutesToHours(billableMinutes)} faturáveis`,
           },
           {
+            id: "daily-avg",
             label: "Média diária",
             value: loading ? null : minutesToHours(avgDailyMinutes),
             icon: TrendingUp,
             sub: "dias com registro",
           },
           {
+            id: "projects",
             label: "Projetos",
             value: loading ? null : String(activeProjects),
             icon: PieChart,
             sub: "com horas lançadas",
           },
         ].map((stat) => (
-          <motion.div key={stat.label} variants={itemVariants}>
+          <motion.div key={stat.id} variants={itemVariants}>
             <Card className="border-border/50 bg-card/80 backdrop-blur">
               <CardContent className="flex items-center gap-4 pt-5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10">
