@@ -100,9 +100,6 @@ const columns: ColumnDef<TimesheetEntry>[] = [
           <p className="truncate font-medium text-foreground">
             {row.original.project.name}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {row.original.project.code}
-          </p>
         </div>
       </div>
     ),

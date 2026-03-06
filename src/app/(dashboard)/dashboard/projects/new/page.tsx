@@ -36,9 +36,7 @@ const createProjectSchema = z.object({
     .max(100, "Máximo de 100 caracteres"),
   description: z.string().max(500, "Máximo de 500 caracteres").optional(),
   clientName: z.string().optional(),
-  color: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Selecione uma cor"),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Selecione uma cor"),
   billable: z.boolean(),
   budget: z.string().optional(),
   memberIds: z.array(z.string()),
@@ -49,9 +47,21 @@ type CreateProjectInput = z.infer<typeof createProjectSchema>;
 // ─── Constants ─────────────────────────────────────────────────────────
 
 const PROJECT_COLORS = [
-  "#f97316", "#3b82f6", "#22c55e", "#8b5cf6", "#ec4899",
-  "#14b8a6", "#f59e0b", "#6366f1", "#ef4444", "#06b6d4",
-  "#84cc16", "#d946ef", "#0ea5e9", "#f43f5e", "#a855f7",
+  "#f97316",
+  "#3b82f6",
+  "#22c55e",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#f59e0b",
+  "#6366f1",
+  "#ef4444",
+  "#06b6d4",
+  "#84cc16",
+  "#d946ef",
+  "#0ea5e9",
+  "#f43f5e",
+  "#a855f7",
   "#10b981",
 ];
 
@@ -89,6 +99,17 @@ export default function NewProjectPage() {
     new Set(),
   );
   const [memberSearch, setMemberSearch] = useState("");
+
+  // Add the current user to the selected members list by default
+  useEffect(() => {
+    if (session?.user?.id) {
+      setSelectedMembers((prev) => {
+        const next = new Set(prev);
+        next.add(session.user.id);
+        return next;
+      });
+    }
+  }, [session?.user?.id]);
 
   const {
     register,
@@ -338,7 +359,7 @@ export default function NewProjectPage() {
         </motion.div>
 
         {/* Team Members (only for privileged users who can see people) */}
-        {(
+        {
           <motion.div variants={itemVariants}>
             <Card>
               <CardHeader>
@@ -364,33 +385,55 @@ export default function NewProjectPage() {
                 <div className="max-h-60 space-y-1 overflow-y-auto">
                   {filteredPeople.map((person) => {
                     const isSelected = selectedMembers.has(person.id);
+                    const isCurrentUser = session?.user?.id === person.id;
+
                     return (
+                      // biome-ignore lint/a11y/useSemanticElements: <!-- The div is used for custom keyboard handling and styling -->
                       <div
                         key={person.id}
                         role="button"
-                        tabIndex={0}
-                        onClick={() => toggleMember(person.id)}
+                        tabIndex={isCurrentUser ? -1 : 0}
+                        onClick={() =>
+                          !isCurrentUser && toggleMember(person.id)
+                        }
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
+                          if (
+                            !isCurrentUser &&
+                            (e.key === "Enter" || e.key === " ")
+                          ) {
                             e.preventDefault();
                             toggleMember(person.id);
                           }
                         }}
                         className={cn(
-                          "flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left transition-colors",
+                          "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left transition-colors",
                           isSelected
                             ? "bg-brand-50 dark:bg-brand-950/30"
                             : "hover:bg-muted/50",
+                          isCurrentUser
+                            ? "cursor-default opacity-80"
+                            : "cursor-pointer",
                         )}
                       >
                         <div>
-                          <p className="text-sm font-medium">{person.name}</p>
+                          <p className="text-sm font-medium">
+                            {person.name}
+                            {isCurrentUser && (
+                              <span className="ml-2 text-[10px] font-normal uppercase tracking-wider text-muted-foreground">
+                                (Você)
+                              </span>
+                            )}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {person.email}
                           </p>
                         </div>
                         <span className="pointer-events-none">
-                          <Switch checked={isSelected} tabIndex={-1} />
+                          <Switch
+                            checked={isSelected}
+                            tabIndex={-1}
+                            disabled={isCurrentUser}
+                          />
                         </span>
                       </div>
                     );
@@ -411,7 +454,7 @@ export default function NewProjectPage() {
               </CardContent>
             </Card>
           </motion.div>
-        )}
+        }
 
         {/* Actions */}
         <motion.div

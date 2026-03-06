@@ -66,8 +66,20 @@ export function formatTimerDisplay(ms: number): string {
  * @example parseLocalDate("2025-03-01") => Date(2025, 2, 1) // March 1st local
  */
 export function parseLocalDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day);
+  // If it's a full ISO string (like 2024-03-04T12:00:00Z), use new Date()
+  if (dateStr.includes("T")) {
+    return new Date(dateStr);
+  }
+
+  // Otherwise assume YYYY-MM-DD
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return new Date(year, month - 1, day);
+  }
+
+  // Fallback for other formats
+  return new Date(dateStr);
 }
 
 /**
@@ -78,6 +90,7 @@ export function parseLocalDate(dateStr: string): Date {
  */
 export function formatDateLabel(dateStr: string): string {
   const date = parseLocalDate(dateStr);
+  if (!date || isNaN(date.getTime())) return "Data inválida";
   if (isToday(date)) return "Hoje";
   if (isYesterday(date)) return "Ontem";
   return format(date, "d 'de' MMMM", { locale: ptBR });
@@ -87,8 +100,10 @@ export function formatDateLabel(dateStr: string): string {
  * Format a date for display in the UI.
  * @example formatDate(new Date()) => "01 mar 2025"
  */
-export function formatDate(date: Date | string): string {
+export function formatDate(date?: Date | string | null): string {
+  if (!date) return "N/A";
   const d = typeof date === "string" ? parseLocalDate(date) : date;
+  if (!d || isNaN(d.getTime())) return "Data inválida";
   return format(d, "dd MMM yyyy", { locale: ptBR });
 }
 
@@ -96,8 +111,10 @@ export function formatDate(date: Date | string): string {
  * Get relative time from now.
  * @example getRelativeTime(new Date()) => "há poucos segundos"
  */
-export function getRelativeTime(date: Date | string): string {
+export function getRelativeTime(date?: Date | string | null): string {
+  if (!date) return "N/A";
   const d = typeof date === "string" ? parseLocalDate(date) : date;
+  if (!d || isNaN(d.getTime())) return "Data inválida";
   return formatDistanceToNow(d, { addSuffix: true, locale: ptBR });
 }
 

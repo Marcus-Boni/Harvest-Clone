@@ -525,7 +525,7 @@ export default function TimesheetDetailPage() {
                             </p>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {project.code} · {project.entriesCount}{" "}
+                            {project.entriesCount}{" "}
                             {project.entriesCount === 1
                               ? "registro"
                               : "registros"}
