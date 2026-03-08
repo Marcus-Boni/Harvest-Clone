@@ -1,47 +1,47 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import {
-  CheckCircle2,
-  Link2,
-  RefreshCw,
   AlertCircle,
-  Loader2,
+  ArrowRight,
   BookOpen,
+  Check,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Globe,
-  KeyRound,
-  ShieldCheck,
+  Clock,
   Copy,
-  Check,
   ExternalLink,
   FolderSync,
   GitBranch,
-  Clock,
-  ArrowRight,
-  Puzzle,
-  Trash2,
-  Terminal,
+  Globe,
+  KeyRound,
+  Link2,
+  Loader2,
   Package,
   Plus,
+  Puzzle,
+  RefreshCw,
+  ShieldCheck,
+  Terminal,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  azureDevopsConfigSchema,
-  type AzureDevopsConfigInput,
-} from "@/lib/validations/azure-devops.schema";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  type AzureDevopsConfigInput,
+  azureDevopsConfigSchema,
+} from "@/lib/validations/azure-devops.schema";
 
 function CodeSnippet({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
@@ -59,7 +59,11 @@ function CodeSnippet({ code }: { code: string }) {
         className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
         aria-label="Copiar"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-green-500" />
+        ) : (
+          <Copy className="h-3.5 w-3.5" />
+        )}
       </button>
     </div>
   );
@@ -89,7 +93,9 @@ function TutorialStep({
           <Icon className="h-4 w-4 text-brand-500" />
           <h4 className="text-sm font-semibold text-foreground">{title}</h4>
         </div>
-        <div className="space-y-2 text-sm text-muted-foreground">{children}</div>
+        <div className="space-y-2 text-sm text-muted-foreground">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -117,7 +123,9 @@ export default function AzureDevOpsPage() {
     tokenPreview: string | null;
   } | null>(null);
   const [isLoadingExtToken, setIsLoadingExtToken] = useState(true);
-  const [newlyGeneratedToken, setNewlyGeneratedToken] = useState<string | null>(null);
+  const [newlyGeneratedToken, setNewlyGeneratedToken] = useState<string | null>(
+    null,
+  );
   const [isGeneratingToken, setIsGeneratingToken] = useState(false);
   const [isRevokingToken, setIsRevokingToken] = useState(false);
   const [appOrigin, setAppOrigin] = useState("");
@@ -191,10 +199,16 @@ export default function AzureDevOpsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao gerar token.");
       setNewlyGeneratedToken(data.token);
-      setExtensionTokenStatus({ hasToken: true, tokenPreview: data.token.slice(-6) });
-      toast.success("Token gerado! Copie-o agora — ele não será exibido novamente.");
+      setExtensionTokenStatus({
+        hasToken: true,
+        tokenPreview: data.token.slice(-6),
+      });
+      toast.success(
+        "Token gerado! Copie-o agora — ele não será exibido novamente.",
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao gerar token.";
+      const message =
+        error instanceof Error ? error.message : "Erro ao gerar token.";
       toast.error(message);
     } finally {
       setIsGeneratingToken(false);
@@ -204,13 +218,16 @@ export default function AzureDevOpsPage() {
   async function revokeToken() {
     setIsRevokingToken(true);
     try {
-      const res = await fetch("/api/user/extension-token", { method: "DELETE" });
+      const res = await fetch("/api/user/extension-token", {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Falha ao revogar token.");
       setExtensionTokenStatus({ hasToken: false, tokenPreview: null });
       setNewlyGeneratedToken(null);
       toast.success("Token de extensão revogado.");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro ao revogar token.";
+      const message =
+        error instanceof Error ? error.message : "Erro ao revogar token.";
       toast.error(message);
     } finally {
       setIsRevokingToken(false);
@@ -239,7 +256,10 @@ export default function AzureDevOpsPage() {
       // Clear the PAT input after saving for security feeling, but keep connected state
       setValue("pat", "");
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro ao conectar com o Azure DevOps.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao conectar com o Azure DevOps.";
       console.error("[AzureDevOpsPage] onSubmit:", error);
       toast.error(message);
     } finally {
@@ -270,183 +290,242 @@ export default function AzureDevOpsPage() {
         {tutorialOpen === null ? (
           <Skeleton className="h-14 w-full rounded-xl" />
         ) : (
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
-          <CardHeader className="pb-3">
-            <button
-              type="button"
-              onClick={() => setTutorialOpen((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <CardTitle className="flex items-center gap-2 font-display text-base">
-                <BookOpen className="h-4 w-4 text-brand-500" />
-                Como configurar a integração
-              </CardTitle>
-              {tutorialOpen ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </button>
-          </CardHeader>
+          <Card className="border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader className="pb-3">
+              <button
+                type="button"
+                onClick={() => setTutorialOpen((v) => !v)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <CardTitle className="flex items-center gap-2 font-display text-base">
+                  <BookOpen className="h-4 w-4 text-brand-500" />
+                  Como configurar a integração
+                </CardTitle>
+                {tutorialOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </CardHeader>
 
-          {tutorialOpen === true && (
-            <CardContent className="pt-0">
-              <div className="mb-4 rounded-lg border border-brand-500/20 bg-brand-500/5 px-4 py-3">
-                <p className="text-xs text-muted-foreground">
-                  Você precisará de dois dados do Azure DevOps: a{" "}
-                  <span className="font-medium text-foreground">URL da sua organização</span>{" "}
-                  e um{" "}
-                  <span className="font-medium text-foreground">Personal Access Token (PAT)</span>.
-                  Siga os passos abaixo para obtê-los.
-                </p>
-              </div>
-
-              {/* Part 1: Organization URL */}
-              <div className="mb-6">
-                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Globe className="h-4 w-4 text-brand-500" />
-                  Parte 1 — URL da Organização
-                </h3>
-                <div className="space-y-0">
-                  <TutorialStep step={1} icon={Globe} title="Acesse o Azure DevOps">
-                    <p>
-                      Abra o navegador e acesse{" "}
-                      <span className="font-medium text-foreground">dev.azure.com</span>. Faça
-                      login com a conta Microsoft associada à sua organização.
-                    </p>
-                  </TutorialStep>
-
-                  <TutorialStep step={2} icon={Globe} title="Identifique o nome da organização">
-                    <p>
-                      Após o login, você será direcionado para a página inicial. O nome da
-                      organização aparece na URL do navegador logo após{" "}
-                      <span className="font-mono text-xs text-foreground">dev.azure.com/</span>.
-                    </p>
-                    <div className="mt-2 space-y-1.5">
-                      <p className="text-xs text-muted-foreground">Exemplo de URL que você verá:</p>
-                      <CodeSnippet code="https://dev.azure.com/minha-empresa/" />
-                    </div>
-                  </TutorialStep>
-
-                  <TutorialStep step={3} icon={Globe} title="Monte a URL da organização">
-                    <p>
-                      Use a URL base abaixo, substituindo{" "}
-                      <span className="font-mono text-xs text-foreground">{"<organização>"}</span> pelo
-                      nome que apareceu na URL:
-                    </p>
-                    <div className="mt-2 space-y-1.5">
-                      <CodeSnippet code="https://dev.azure.com/<organização>" />
-                      <p className="text-xs text-muted-foreground">
-                        Exemplo preenchido:
-                      </p>
-                      <CodeSnippet code="https://dev.azure.com/minha-empresa" />
-                    </div>
-                  </TutorialStep>
+            {tutorialOpen === true && (
+              <CardContent className="pt-0">
+                <div className="mb-4 rounded-lg border border-brand-500/20 bg-brand-500/5 px-4 py-3">
+                  <p className="text-xs text-muted-foreground">
+                    Você precisará de dois dados do Azure DevOps: a{" "}
+                    <span className="font-medium text-foreground">
+                      URL da sua organização
+                    </span>{" "}
+                    e um{" "}
+                    <span className="font-medium text-foreground">
+                      Personal Access Token (PAT)
+                    </span>
+                    . Siga os passos abaixo para obtê-los.
+                  </p>
                 </div>
-              </div>
 
-              <div className="my-4 border-t border-border/40" />
-
-              {/* Part 2: PAT */}
-              <div>
-                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <KeyRound className="h-4 w-4 text-brand-500" />
-                  Parte 2 — Personal Access Token (PAT)
-                </h3>
-                <div className="space-y-0">
-                  <TutorialStep step={4} icon={KeyRound} title="Abra as configurações de segurança">
-                    <p>
-                      No Azure DevOps, clique na sua foto de perfil no canto superior direito e
-                      selecione{" "}
-                      <span className="font-medium text-foreground">
-                        "Personal access tokens"
-                      </span>
-                      .
-                    </p>
-                    <p className="mt-1">
-                      Alternativamente, acesse diretamente pelo link abaixo (substitua{" "}
-                      <span className="font-mono text-xs text-foreground">{"<organização>"}</span>):
-                    </p>
-                    <div className="mt-2">
-                      <CodeSnippet code="https://dev.azure.com/<organização>/_usersSettings/tokens" />
-                    </div>
-                  </TutorialStep>
-
-                  <TutorialStep step={5} icon={KeyRound} title='Clique em "New Token"'>
-                    <p>
-                      Na página de Personal Access Tokens, clique no botão{" "}
-                      <span className="font-medium text-foreground">
-                        "+ New Token"
-                      </span>{" "}
-                      para criar um novo token.
-                    </p>
-                  </TutorialStep>
-
-                  <TutorialStep step={6} icon={ShieldCheck} title="Configure as permissões">
-                    <p>
-                      Preencha o formulário com as seguintes configurações:
-                    </p>
-                    <ul className="mt-2 space-y-2">
-                      {[
-                        { label: "Nome", value: "Harvest Time Tracker" },
-                        { label: "Organização", value: "Sua organização" },
-                        { label: "Expiração", value: "90 dias ou personalizado" },
-                      ].map(({ label, value }) => (
-                        <li key={label} className="flex items-start gap-2">
-                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />
-                          <span>
-                            <span className="font-medium text-foreground">{label}:</span>{" "}
-                            {value}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-3 rounded-md border border-border/40 bg-muted/30 p-3">
-                      <p className="mb-2 text-xs font-medium text-foreground">
-                        Escopos mínimos necessários:
+                {/* Part 1: Organization URL */}
+                <div className="mb-6">
+                  <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Globe className="h-4 w-4 text-brand-500" />
+                    Parte 1 — URL da Organização
+                  </h3>
+                  <div className="space-y-0">
+                    <TutorialStep
+                      step={1}
+                      icon={Globe}
+                      title="Acesse o Azure DevOps"
+                    >
+                      <p>
+                        Abra o navegador e acesse{" "}
+                        <span className="font-medium text-foreground">
+                          dev.azure.com
+                        </span>
+                        . Faça login com a conta Microsoft associada à sua
+                        organização.
                       </p>
-                      <ul className="space-y-1.5">
+                    </TutorialStep>
+
+                    <TutorialStep
+                      step={2}
+                      icon={Globe}
+                      title="Identifique o nome da organização"
+                    >
+                      <p>
+                        Após o login, você será direcionado para a página
+                        inicial. O nome da organização aparece na URL do
+                        navegador logo após{" "}
+                        <span className="font-mono text-xs text-foreground">
+                          dev.azure.com/
+                        </span>
+                        .
+                      </p>
+                      <div className="mt-2 space-y-1.5">
+                        <p className="text-xs text-muted-foreground">
+                          Exemplo de URL que você verá:
+                        </p>
+                        <CodeSnippet code="https://dev.azure.com/minha-empresa/" />
+                      </div>
+                    </TutorialStep>
+
+                    <TutorialStep
+                      step={3}
+                      icon={Globe}
+                      title="Monte a URL da organização"
+                    >
+                      <p>
+                        Use a URL base abaixo, substituindo{" "}
+                        <span className="font-mono text-xs text-foreground">
+                          {"<organização>"}
+                        </span>{" "}
+                        pelo nome que apareceu na URL:
+                      </p>
+                      <div className="mt-2 space-y-1.5">
+                        <CodeSnippet code="https://dev.azure.com/<organização>" />
+                        <p className="text-xs text-muted-foreground">
+                          Exemplo preenchido:
+                        </p>
+                        <CodeSnippet code="https://dev.azure.com/minha-empresa" />
+                      </div>
+                    </TutorialStep>
+                  </div>
+                </div>
+
+                <div className="my-4 border-t border-border/40" />
+
+                {/* Part 2: PAT */}
+                <div>
+                  <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <KeyRound className="h-4 w-4 text-brand-500" />
+                    Parte 2 — Personal Access Token (PAT)
+                  </h3>
+                  <div className="space-y-0">
+                    <TutorialStep
+                      step={4}
+                      icon={KeyRound}
+                      title="Abra as configurações de segurança"
+                    >
+                      <p>
+                        No Azure DevOps, clique na sua foto de perfil no canto
+                        superior direito e selecione{" "}
+                        <span className="font-medium text-foreground">
+                          "Personal access tokens"
+                        </span>
+                        .
+                      </p>
+                      <p className="mt-1">
+                        Alternativamente, acesse diretamente pelo link abaixo
+                        (substitua{" "}
+                        <span className="font-mono text-xs text-foreground">
+                          {"<organização>"}
+                        </span>
+                        ):
+                      </p>
+                      <div className="mt-2">
+                        <CodeSnippet code="https://dev.azure.com/<organização>/_usersSettings/tokens" />
+                      </div>
+                    </TutorialStep>
+
+                    <TutorialStep
+                      step={5}
+                      icon={KeyRound}
+                      title='Clique em "New Token"'
+                    >
+                      <p>
+                        Na página de Personal Access Tokens, clique no botão{" "}
+                        <span className="font-medium text-foreground">
+                          "+ New Token"
+                        </span>{" "}
+                        para criar um novo token.
+                      </p>
+                    </TutorialStep>
+
+                    <TutorialStep
+                      step={6}
+                      icon={ShieldCheck}
+                      title="Configure as permissões"
+                    >
+                      <p>
+                        Preencha o formulário com as seguintes configurações:
+                      </p>
+                      <ul className="mt-2 space-y-2">
                         {[
-                          { scope: "Work Items", perm: "Read & Write" },
-                          { scope: "Project and Team", perm: "Read" },
-                          { scope: "Code", perm: "Read" },
-                        ].map(({ scope, perm }) => (
-                          <li key={scope} className="flex items-center justify-between">
-                            <span className="font-mono text-xs text-foreground">{scope}</span>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] bg-brand-500/10 text-brand-500"
-                            >
-                              {perm}
-                            </Badge>
+                          { label: "Nome", value: "Harvest Time Tracker" },
+                          { label: "Organização", value: "Sua organização" },
+                          {
+                            label: "Expiração",
+                            value: "90 dias ou personalizado",
+                          },
+                        ].map(({ label, value }) => (
+                          <li key={label} className="flex items-start gap-2">
+                            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />
+                            <span>
+                              <span className="font-medium text-foreground">
+                                {label}:
+                              </span>{" "}
+                              {value}
+                            </span>
                           </li>
                         ))}
                       </ul>
-                    </div>
-                  </TutorialStep>
+                      <div className="mt-3 rounded-md border border-border/40 bg-muted/30 p-3">
+                        <p className="mb-2 text-xs font-medium text-foreground">
+                          Escopos mínimos necessários:
+                        </p>
+                        <ul className="space-y-1.5">
+                          {[
+                            { scope: "Work Items", perm: "Read & Write" },
+                            { scope: "Project and Team", perm: "Read" },
+                            { scope: "Code", perm: "Read" },
+                          ].map(({ scope, perm }) => (
+                            <li
+                              key={scope}
+                              className="flex items-center justify-between"
+                            >
+                              <span className="font-mono text-xs text-foreground">
+                                {scope}
+                              </span>
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] bg-brand-500/10 text-brand-500"
+                              >
+                                {perm}
+                              </Badge>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </TutorialStep>
 
-                  <TutorialStep step={7} icon={KeyRound} title="Copie e salve o token">
-                    <p>
-                      Clique em{" "}
-                      <span className="font-medium text-foreground">"Create"</span> e copie
-                      o token gerado imediatamente.{" "}
-                      <span className="font-medium text-foreground">
-                        Ele não será exibido novamente.
-                      </span>
-                    </p>
-                    <div className="mt-2 flex items-start gap-2 rounded-md border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
-                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
-                      <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                        Guarde o token em um local seguro. Cole-o no campo abaixo logo
-                        em seguida.
+                    <TutorialStep
+                      step={7}
+                      icon={KeyRound}
+                      title="Copie e salve o token"
+                    >
+                      <p>
+                        Clique em{" "}
+                        <span className="font-medium text-foreground">
+                          "Create"
+                        </span>{" "}
+                        e copie o token gerado imediatamente.{" "}
+                        <span className="font-medium text-foreground">
+                          Ele não será exibido novamente.
+                        </span>
                       </p>
-                    </div>
-                  </TutorialStep>
+                      <div className="mt-2 flex items-start gap-2 rounded-md border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
+                        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                          Guarde o token em um local seguro. Cole-o no campo
+                          abaixo logo em seguida.
+                        </p>
+                      </div>
+                    </TutorialStep>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          )}
-        </Card>
+              </CardContent>
+            )}
+          </Card>
         )}
       </motion.div>
 
@@ -513,7 +592,8 @@ export default function AzureDevOpsPage() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  O PAT precisa de permissões de leitura em Work Items, Projects e Code.{" "}
+                  O PAT precisa de permissões de leitura em Work Items, Projects
+                  e Code.{" "}
                   {!tutorialOpen && (
                     <button
                       type="button"
@@ -578,13 +658,19 @@ export default function AzureDevOpsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">Importação de Projetos</p>
-                    <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-500">
+                    <p className="text-sm font-medium text-foreground">
+                      Importação de Projetos
+                    </p>
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] bg-green-500/10 text-green-500"
+                    >
                       Disponível
                     </Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Importe projetos do Azure DevOps e vincule-os a registros de horas.
+                    Importe projetos do Azure DevOps e vincule-os a registros de
+                    horas.
                   </p>
                 </div>
                 {isConnected ? (
@@ -599,7 +685,12 @@ export default function AzureDevOpsPage() {
                     </Button>
                   </Link>
                 ) : (
-                  <Button variant="outline" size="sm" className="shrink-0 text-xs" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 text-xs"
+                    disabled
+                  >
                     Importar
                   </Button>
                 )}
@@ -612,13 +703,16 @@ export default function AzureDevOpsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">Sincronização de Work Items</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Sincronização de Work Items
+                    </p>
                     <Badge variant="secondary" className="text-[10px]">
                       Em breve
                     </Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Associe work items do Azure DevOps a apontamentos automaticamente.
+                    Associe work items do Azure DevOps a apontamentos
+                    automaticamente.
                   </p>
                 </div>
               </div>
@@ -630,13 +724,16 @@ export default function AzureDevOpsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">Envio de Horas</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Envio de Horas
+                    </p>
                     <Badge variant="secondary" className="text-[10px]">
                       Em breve
                     </Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Envie registros de horas diretamente para os work items do Azure DevOps.
+                    Envie registros de horas diretamente para os work items do
+                    Azure DevOps.
                   </p>
                 </div>
               </div>
@@ -660,8 +757,9 @@ export default function AzureDevOpsPage() {
               Extensão para Azure DevOps
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Registre horas diretamente nos work items do Azure DevOps sem sair da plataforma.
-              Instale a extensão e conecte-a à sua conta com um token pessoal.
+              Registre horas diretamente nos work items do Azure DevOps sem sair
+              da plataforma. Instale a extensão e conecte-a à sua conta com um
+              token pessoal.
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -703,7 +801,8 @@ export default function AzureDevOpsPage() {
                   <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 py-2">
                     <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-500" />
                     <span className="flex-1 font-mono text-xs text-muted-foreground">
-                      ••••••••••••••••••••••••••{extensionTokenStatus.tokenPreview}
+                      ••••••••••••••••••••••••••
+                      {extensionTokenStatus.tokenPreview}
                     </span>
                     <Badge
                       variant="secondary"
@@ -746,7 +845,8 @@ export default function AzureDevOpsPage() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    Nenhum token ativo. Gere um token para conectar a extensão à sua conta.
+                    Nenhum token ativo. Gere um token para conectar a extensão à
+                    sua conta.
                   </p>
                   <Button
                     size="sm"
@@ -775,10 +875,17 @@ export default function AzureDevOpsPage() {
               </h3>
 
               <div className="space-y-0">
-                <TutorialStep step={1} icon={Terminal} title="Compile e empacote a extensão">
+                <TutorialStep
+                  step={1}
+                  icon={Terminal}
+                  title="Compile e empacote a extensão"
+                >
                   <p>
                     Na raiz do projeto, rode os comandos para gerar o arquivo{" "}
-                    <span className="font-mono text-xs text-foreground">.vsix</span>:
+                    <span className="font-mono text-xs text-foreground">
+                      .vsix
+                    </span>
+                    :
                   </p>
                   <div className="mt-2 space-y-1.5">
                     <CodeSnippet code="cd azure-devops-extension && pnpm install" />
@@ -793,7 +900,11 @@ export default function AzureDevOpsPage() {
                   </p>
                 </TutorialStep>
 
-                <TutorialStep step={2} icon={Package} title="Instale na organização do Azure DevOps">
+                <TutorialStep
+                  step={2}
+                  icon={Package}
+                  title="Instale na organização do Azure DevOps"
+                >
                   <p>
                     Acesse{" "}
                     <span className="font-medium text-foreground">
@@ -807,19 +918,31 @@ export default function AzureDevOpsPage() {
                       "Browse local extensions"
                     </span>{" "}
                     e faça upload do arquivo{" "}
-                    <span className="font-mono text-xs text-foreground">.vsix</span> gerado.
+                    <span className="font-mono text-xs text-foreground">
+                      .vsix
+                    </span>{" "}
+                    gerado.
                   </p>
                 </TutorialStep>
 
-                <TutorialStep step={3} icon={KeyRound} title="Configure o painel no work item">
+                <TutorialStep
+                  step={3}
+                  icon={KeyRound}
+                  title="Configure o painel no work item"
+                >
                   <p>
                     Abra qualquer work item no Azure DevOps. O painel{" "}
-                    <span className="font-medium text-foreground">Time Tracker</span> aparecerá
-                    no formulário. Cole a URL desta aplicação e o token gerado acima.
+                    <span className="font-medium text-foreground">
+                      Time Tracker
+                    </span>{" "}
+                    aparecerá no formulário. Cole a URL desta aplicação e o
+                    token gerado acima.
                   </p>
                   {appOrigin && (
                     <div className="mt-2">
-                      <p className="mb-1.5 text-xs text-muted-foreground">URL desta aplicação:</p>
+                      <p className="mb-1.5 text-xs text-muted-foreground">
+                        URL desta aplicação:
+                      </p>
                       <CodeSnippet code={appOrigin} />
                     </div>
                   )}
@@ -831,7 +954,11 @@ export default function AzureDevOpsPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                    >
                       <ExternalLink className="h-3.5 w-3.5" />
                       Azure Marketplace
                     </Button>
