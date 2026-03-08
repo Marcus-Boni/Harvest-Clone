@@ -20,6 +20,11 @@ import {
   GitBranch,
   Clock,
   ArrowRight,
+  Puzzle,
+  Trash2,
+  Terminal,
+  Package,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +111,17 @@ export default function AzureDevOpsPage() {
   // null = not yet determined (avoids open→close flash on load)
   const [tutorialOpen, setTutorialOpen] = useState<boolean | null>(null);
 
+  // Extension token state
+  const [extensionTokenStatus, setExtensionTokenStatus] = useState<{
+    hasToken: boolean;
+    tokenPreview: string | null;
+  } | null>(null);
+  const [isLoadingExtToken, setIsLoadingExtToken] = useState(true);
+  const [newlyGeneratedToken, setNewlyGeneratedToken] = useState<string | null>(null);
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [isRevokingToken, setIsRevokingToken] = useState(false);
+  const [appOrigin, setAppOrigin] = useState("");
+
   const {
     register,
     handleSubmit,
@@ -121,6 +137,27 @@ export default function AzureDevOpsPage() {
   });
 
   const watchedOrgUrl = watch("organizationUrl");
+
+  useEffect(() => {
+    setAppOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    async function fetchExtensionToken() {
+      try {
+        const res = await fetch("/api/user/extension-token");
+        if (res.ok) {
+          const data = await res.json();
+          setExtensionTokenStatus(data);
+        }
+      } catch (error) {
+        console.error("Error fetching extension token status:", error);
+      } finally {
+        setIsLoadingExtToken(false);
+      }
+    }
+    fetchExtensionToken();
+  }, []);
 
   useEffect(() => {
     async function fetchConfig() {
@@ -146,6 +183,39 @@ export default function AzureDevOpsPage() {
     }
     fetchConfig();
   }, [setValue]);
+
+  async function generateToken() {
+    setIsGeneratingToken(true);
+    try {
+      const res = await fetch("/api/user/extension-token", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao gerar token.");
+      setNewlyGeneratedToken(data.token);
+      setExtensionTokenStatus({ hasToken: true, tokenPreview: data.token.slice(-6) });
+      toast.success("Token gerado! Copie-o agora — ele não será exibido novamente.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao gerar token.";
+      toast.error(message);
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  }
+
+  async function revokeToken() {
+    setIsRevokingToken(true);
+    try {
+      const res = await fetch("/api/user/extension-token", { method: "DELETE" });
+      if (!res.ok) throw new Error("Falha ao revogar token.");
+      setExtensionTokenStatus({ hasToken: false, tokenPreview: null });
+      setNewlyGeneratedToken(null);
+      toast.success("Token de extensão revogado.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao revogar token.";
+      toast.error(message);
+    } finally {
+      setIsRevokingToken(false);
+    }
+  }
 
   const onSubmit = async (data: AzureDevopsConfigInput) => {
     setIsSaving(true);
@@ -577,6 +647,198 @@ export default function AzureDevOpsPage() {
                 Conecte sua conta acima para habilitar os recursos.
               </p>
             )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Extension Token Section */}
+      <motion.div variants={itemVariants}>
+        <Card className="border-border/50 bg-card/80 backdrop-blur">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 font-display text-base">
+              <Puzzle className="h-4 w-4 text-brand-500" />
+              Extensão para Azure DevOps
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Registre horas diretamente nos work items do Azure DevOps sem sair da plataforma.
+              Instale a extensão e conecte-a à sua conta com um token pessoal.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Token Management */}
+            <div className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <KeyRound className="h-4 w-4 text-brand-500" />
+                Token de Extensão
+              </h3>
+
+              {isLoadingExtToken ? (
+                <Skeleton className="h-10 w-full" />
+              ) : newlyGeneratedToken ? (
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 rounded-md border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                      Copie o token agora — ele não será exibido novamente.
+                    </p>
+                  </div>
+                  <CodeSnippet code={newlyGeneratedToken} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={revokeToken}
+                    disabled={isRevokingToken}
+                    className="gap-1.5 text-xs text-red-500 hover:text-red-500 border-red-500/30 hover:border-red-500/60 hover:bg-red-500/5"
+                  >
+                    {isRevokingToken ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Revogar Token
+                  </Button>
+                </div>
+              ) : extensionTokenStatus?.hasToken ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/50 px-3 py-2">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                    <span className="flex-1 font-mono text-xs text-muted-foreground">
+                      ••••••••••••••••••••••••••{extensionTokenStatus.tokenPreview}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] bg-green-500/10 text-green-500"
+                    >
+                      Ativo
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={generateToken}
+                      disabled={isGeneratingToken || isRevokingToken}
+                      className="gap-1.5 text-xs"
+                    >
+                      {isGeneratingToken ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
+                      Gerar Novo Token
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={revokeToken}
+                      disabled={isRevokingToken || isGeneratingToken}
+                      className="gap-1.5 text-xs text-red-500 hover:text-red-500 border-red-500/30 hover:border-red-500/60 hover:bg-red-500/5"
+                    >
+                      {isRevokingToken ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Revogar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum token ativo. Gere um token para conectar a extensão à sua conta.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={generateToken}
+                    disabled={isGeneratingToken}
+                    className="gap-1.5 bg-brand-500 text-white hover:bg-brand-600 text-xs"
+                  >
+                    {isGeneratingToken ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" />
+                    )}
+                    Gerar Token de Extensão
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-border/40" />
+
+            {/* Installation Guide */}
+            <div className="space-y-4">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Package className="h-4 w-4 text-brand-500" />
+                Instalação da Extensão
+              </h3>
+
+              <div className="space-y-0">
+                <TutorialStep step={1} icon={Terminal} title="Compile e empacote a extensão">
+                  <p>
+                    Na raiz do projeto, rode os comandos para gerar o arquivo{" "}
+                    <span className="font-mono text-xs text-foreground">.vsix</span>:
+                  </p>
+                  <div className="mt-2 space-y-1.5">
+                    <CodeSnippet code="cd azure-devops-extension && pnpm install" />
+                    <CodeSnippet code="pnpm package" />
+                  </div>
+                  <p className="mt-1">
+                    O pacote será gerado em{" "}
+                    <span className="font-mono text-xs text-foreground">
+                      azure-devops-extension/dist/vsix/
+                    </span>
+                    .
+                  </p>
+                </TutorialStep>
+
+                <TutorialStep step={2} icon={Package} title="Instale na organização do Azure DevOps">
+                  <p>
+                    Acesse{" "}
+                    <span className="font-medium text-foreground">
+                      Organization Settings → Extensions
+                    </span>{" "}
+                    na sua organização do Azure DevOps.
+                  </p>
+                  <p className="mt-1">
+                    Clique em{" "}
+                    <span className="font-medium text-foreground">
+                      "Browse local extensions"
+                    </span>{" "}
+                    e faça upload do arquivo{" "}
+                    <span className="font-mono text-xs text-foreground">.vsix</span> gerado.
+                  </p>
+                </TutorialStep>
+
+                <TutorialStep step={3} icon={KeyRound} title="Configure o painel no work item">
+                  <p>
+                    Abra qualquer work item no Azure DevOps. O painel{" "}
+                    <span className="font-medium text-foreground">Time Tracker</span> aparecerá
+                    no formulário. Cole a URL desta aplicação e o token gerado acima.
+                  </p>
+                  {appOrigin && (
+                    <div className="mt-2">
+                      <p className="mb-1.5 text-xs text-muted-foreground">URL desta aplicação:</p>
+                      <CodeSnippet code={appOrigin} />
+                    </div>
+                  )}
+                </TutorialStep>
+
+                <div className="pl-12 pt-0 pb-2">
+                  <a
+                    href="https://marketplace.visualstudio.com/azuredevops"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Azure Marketplace
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

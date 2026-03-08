@@ -1,0 +1,49 @@
+{
+  "manifestVersion": 1,
+  "id": "optsolv-time-tracker",
+  "publisher": "OptSolvTimeTracker",
+  "version": "1.0.3",
+  "name": "OptSolv Time Tracker",
+  "description": "Registre e visualize horas diretamente nos work items do Azure DevOps.",
+  "public": false,
+  "targets": [{ "id": "Microsoft.VisualStudio.Services" }],
+  "categories": ["Azure Boards"],
+  "tags": ["time tracking", "time entry", "timer", "harvest alternative"],
+  "icons": {
+    "default": "images/logo.png"
+  },
+  "files": [
+    {
+      "path": "dist",
+      "addressable": true
+    },
+    {
+      "path": "images",
+      "addressable": true
+    }
+  ],
+  "content": {
+    "details": {
+      "path": "README.md"
+    }
+  },
+  "links": {
+    "support": {
+      "uri": "https://github.com/optsolv/time-tracker"
+    }
+  },
+  "contributions": [
+    {
+      "id": "work-item-form-group",
+      "type": "ms.vss-work-web.work-item-form-group",
+      "description": "Painel de rastreamento de horas do OptSolv Time Tracker.",
+      "targets": ["ms.vss-work-web.work-item-form"],
+      "properties": {
+        "name": "Time Tracker",
+        "uri": "dist/work-item-form/index.html",
+        "height": 360
+      }
+    }
+  ],
+  "scopes": ["vso.work"]
+}

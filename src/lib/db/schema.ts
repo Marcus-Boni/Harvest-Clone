@@ -30,6 +30,8 @@ export const user = pgTable("user", {
   azureId: text("azure_id"),
   weeklyCapacity: integer("weekly_capacity").default(40).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
+  /** Token for the Azure DevOps browser extension (Bearer auth) */
+  extensionToken: text("extension_token").unique(),
 });
 
 export const session = pgTable(
