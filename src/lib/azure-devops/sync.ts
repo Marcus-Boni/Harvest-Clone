@@ -5,13 +5,11 @@ import { decrypt } from "@/lib/encryption";
 import { createAzureDevOpsClient } from "./client";
 
 /**
- * Trigger asynchronous Completed Work sync for one or more Azure DevOps work items.
- * @param deltaMinutes - minutes of the new entry being added (used to subtract from RemainingWork)
+ * Trigger asynchronous scheduling sync for one or more Azure DevOps work items.
  */
 export function triggerCompletedWorkSync(
   userId: string,
   workItemIds: Array<number | null | undefined>,
-  deltaMinutes?: number,
 ): void {
   const uniqueWorkItemIds = [
     ...new Set(
@@ -22,23 +20,21 @@ export function triggerCompletedWorkSync(
   ];
 
   for (const workItemId of uniqueWorkItemIds) {
-    void syncCompletedWorkToAzDO(userId, workItemId, deltaMinutes);
+    void syncCompletedWorkToAzDO(userId, workItemId);
   }
 }
 
 /**
- * Sync Completed Work hours to Azure DevOps for a given Work Item.
+ * Sync Completed Work and Remaining Work to Azure DevOps for a given Work Item.
  *
  * Sums all non-deleted time entries for that work item across all users
- * and updates the CompletedWork field in AzDO.
- * Optionally subtracts deltaHours from RemainingWork.
+ * and updates the scheduling fields in Azure DevOps based on the current total.
  *
  * Fire-and-forget — logs errors but never throws.
  */
 export async function syncCompletedWorkToAzDO(
   userId: string,
   workItemId: number,
-  deltaMinutes?: number,
 ): Promise<void> {
   try {
     const config = await db.query.azureDevopsConfig.findFirst({
@@ -65,15 +61,9 @@ export async function syncCompletedWorkToAzDO(
 
     const rawTotalHours = (result?.totalMinutes ?? 0) / 60;
     const totalHours = Math.round(rawTotalHours * 100) / 100;
-    const deltaHours =
-      deltaMinutes !== undefined ? deltaMinutes / 60 : undefined;
 
     const client = createAzureDevOpsClient(config.organizationUrl, pat);
-    const success = await client.updateCompletedWork(
-      workItemId,
-      totalHours,
-      deltaHours,
-    );
+    const success = await client.updateCompletedWork(workItemId, totalHours);
 
     if (success) {
       // Mark all linked entries for this WI as synced.
@@ -102,4 +92,3 @@ export async function syncCompletedWorkToAzDO(
     console.error(`[syncCompletedWork] Failed for WI#${workItemId}:`, error);
   }
 }
-

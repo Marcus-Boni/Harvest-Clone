@@ -1,5 +1,4 @@
 import * as SDK from "azure-devops-extension-sdk";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { WorkItemFormApp } from "./WorkItemFormApp";
 
@@ -11,11 +10,7 @@ async function boot() {
   const root = document.getElementById("root");
   if (!root) throw new Error("No #root element");
 
-  createRoot(root).render(
-    <StrictMode>
-      <WorkItemFormApp sdk={SDK} />
-    </StrictMode>,
-  );
+  createRoot(root).render(<WorkItemFormApp sdk={SDK} />);
 }
 
 void boot();

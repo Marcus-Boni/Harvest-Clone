@@ -31,6 +31,15 @@ interface DashboardProps {
 
 type Tab = "log" | "timer" | "history";
 
+function emptyWorkItemData(workItemId: number | null): WorkItemTimeData {
+  return {
+    workItemId: workItemId ?? 0,
+    totalMinutes: 0,
+    myMinutes: 0,
+    entries: [],
+  };
+}
+
 export function Dashboard({
   workItemId,
   workItemTitle,
@@ -53,18 +62,16 @@ export function Dashboard({
   const refresh = useCallback(async () => {
     lastRefreshTs.current = Date.now();
     try {
-      // Run timer + projects in parallel; WI entries only if we have an ID
-      const [timerData, projectList] = await Promise.all([
+      const [timerData, projectList, workItemData] = await Promise.all([
         getTimer(),
         getProjects(),
+        workItemId
+          ? getWorkItemTimeEntries(workItemId)
+          : Promise.resolve(emptyWorkItemData(workItemId)),
       ]);
       setTimer(timerData);
       setProjects(projectList);
-
-      if (workItemId) {
-        const wiData = await getWorkItemTimeEntries(workItemId);
-        setData(wiData);
-      }
+      setData(workItemData);
       setError(null);
     } catch (err) {
       console.error("[OptSolv] refresh error:", err);
@@ -115,17 +122,48 @@ export function Dashboard({
   async function handleTimerStart(
     payload: Parameters<typeof startTimer>[0],
   ): Promise<void> {
-    const newTimer = await startTimer(payload);
-    // Optimistic: apply the new timer state instantly, then do a full refresh
-    setTimer(newTimer);
-    await refresh();
+    const previousTimer = timer;
+    const selectedProject = projects.find((project) => project.id === payload.projectId);
+
+    setTimer({
+      id: `optimistic-${Date.now()}`,
+      projectId: payload.projectId,
+      description: payload.description ?? "",
+      billable: payload.billable ?? true,
+      azureWorkItemId: payload.azureWorkItemId ?? null,
+      azureWorkItemTitle: payload.azureWorkItemTitle ?? null,
+      startedAt: new Date().toISOString(),
+      pausedAt: null,
+      accumulatedMs: 0,
+      project: selectedProject ?? {
+        id: payload.projectId,
+        name: "Projeto",
+        code: "",
+        color: "#f97316",
+      },
+    });
+
+    try {
+      const newTimer = await startTimer(payload);
+      setTimer(newTimer);
+      await refresh();
+    } catch (error) {
+      setTimer(previousTimer);
+      throw error;
+    }
   }
 
   async function handleTimerStop(): Promise<void> {
-    await stopTimer();
-    // Optimistic: clear timer immediately, then refresh for accurate data
+    const previousTimer = timer;
     setTimer(null);
-    await refresh();
+
+    try {
+      await stopTimer();
+      await refresh();
+    } catch (error) {
+      setTimer(previousTimer);
+      throw error;
+    }
   }
 
   if (loading) {
@@ -136,9 +174,10 @@ export function Dashboard({
     );
   }
 
-  const totalHours = data ? minutesToHours(data.totalMinutes) : "--";
-  const myHours = data ? minutesToHours(data.myMinutes) : "--";
-  const entryCount = data?.entries.length ?? 0;
+  const workItemData = data ?? emptyWorkItemData(workItemId);
+  const totalHours = minutesToHours(workItemData.totalMinutes);
+  const myHours = minutesToHours(workItemData.myMinutes);
+  const entryCount = workItemData.entries.length;
 
   // Timer running for THIS work item
   const isTimerActive =
@@ -268,7 +307,7 @@ export function Dashboard({
 
         {tab === "history" && (
           <TimeEntriesList
-            entries={data?.entries ?? []}
+            entries={workItemData.entries}
             devOpsBaseUrl={devOpsBaseUrl}
             workItemId={workItemId}
             onRefresh={refresh}

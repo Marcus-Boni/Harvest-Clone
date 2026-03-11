@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
+import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
+import { db } from "@/lib/db";
+import { project, projectMember, timeEntry } from "@/lib/db/schema";
 import {
   extensionJson,
   extensionOptions,
   resolveExtensionUser,
 } from "@/lib/extension-auth";
-import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
-import { db } from "@/lib/db";
-import { project, projectMember, timeEntry } from "@/lib/db/schema";
 import { createTimeEntrySchema } from "@/lib/validations/time-entry.schema";
 
 export function OPTIONS() {
@@ -47,7 +47,10 @@ export async function POST(req: Request): Promise<Response> {
     });
 
     if (!proj || proj.status !== "active") {
-      return extensionJson({ error: "Projeto não encontrado." }, { status: 404 });
+      return extensionJson(
+        { error: "Projeto não encontrado." },
+        { status: 404 },
+      );
     }
 
     if (extUser.role === "member") {
@@ -82,7 +85,7 @@ export async function POST(req: Request): Promise<Response> {
       })
       .returning();
 
-    triggerCompletedWorkSync(extUser.id, [entry.azureWorkItemId], data.duration);
+    triggerCompletedWorkSync(extUser.id, [entry.azureWorkItemId]);
 
     return extensionJson({ entry }, { status: 201 });
   } catch (error) {

@@ -1,25 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { StartTimerPayload } from "../../shared/api";
+import { resolveProjectIdFromDevOpsContext } from "../../shared/project-matching";
 import type { ActiveTimer, Project } from "../../shared/types";
-
-/** Find the best-match project ID from the list given a DevOps project name */
-function resolveInitialProjectId(
-  projects: Project[],
-  devOpsProjectName: string,
-): string {
-  if (projects.length === 0) return "";
-  if (!devOpsProjectName) return projects[0]?.id ?? "";
-
-  const needle = devOpsProjectName.toLowerCase();
-  const exact = projects.find((p) => p.name.toLowerCase() === needle);
-  if (exact) return exact.id;
-  const partial = projects.find(
-    (p) =>
-      p.name.toLowerCase().includes(needle) ||
-      needle.includes(p.name.toLowerCase()),
-  );
-  return partial?.id ?? projects[0]?.id ?? "";
-}
 
 interface Props {
   timer: ActiveTimer | null;
@@ -42,7 +24,7 @@ export function TimerControl({
   onStop,
 }: Props) {
   const [projectId, setProjectId] = useState(() =>
-    resolveInitialProjectId(projects, devOpsProjectName),
+    resolveProjectIdFromDevOpsContext(projects, devOpsProjectName),
   );
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,6 +32,16 @@ export function TimerControl({
 
   const isTimerForThisItem =
     timer !== null && timer.azureWorkItemId === workItemId;
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+
+    setProjectId((currentProjectId) => {
+      const stillValid = projects.some((project) => project.id === currentProjectId);
+      if (currentProjectId && stillValid) return currentProjectId;
+      return resolveProjectIdFromDevOpsContext(projects, devOpsProjectName);
+    });
+  }, [projects, devOpsProjectName]);
 
   async function handleStart() {
     if (!projectId) {

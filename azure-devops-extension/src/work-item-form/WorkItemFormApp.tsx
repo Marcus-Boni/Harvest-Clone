@@ -1,13 +1,16 @@
 import type * as SDK from "azure-devops-extension-sdk";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { IFormServiceSubset } from "../shared/api";
 import { isConfigured } from "../shared/auth";
 import { Dashboard } from "./components/Dashboard";
 import { SetupScreen } from "./components/SetupScreen";
+import type { IWorkItemFormService } from "azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices";
 
 interface WorkItemFormAppProps {
   sdk: typeof SDK;
 }
+
+const WORK_ITEM_FORM_SERVICE_ID = "ms.vss-work-web.work-item-form";
 
 export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
   const [configured, setConfigured] = useState(isConfigured());
@@ -18,73 +21,108 @@ export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
   const [formService, setFormService] = useState<IFormServiceSubset | null>(null);
   const [sdkReady, setSdkReady] = useState(false);
 
+  const syncWorkItemContext = useCallback(
+    async (service: IFormServiceSubset) => {
+      const workItemFields = service.getFieldValues
+        ? await service.getFieldValues(["System.Title", "System.TeamProject"], {
+            returnOriginalValue: false,
+          })
+        : {
+            "System.Title": await service.getFieldValue("System.Title", {
+              returnOriginalValue: false,
+            }),
+            "System.TeamProject": await service.getFieldValue("System.TeamProject", {
+              returnOriginalValue: false,
+            }),
+          };
+
+      const id = await service.getId().catch(() => null);
+      const hostCtx = sdk.getHost();
+      const pageCtx = sdk.getPageContext() as
+        | { project?: { name?: string }; webContext?: { project?: { name?: string } } }
+        | undefined;
+      const projectName =
+        (workItemFields["System.TeamProject"] as string | undefined) ??
+        pageCtx?.project?.name ??
+        pageCtx?.webContext?.project?.name ??
+        "";
+      const orgName = hostCtx?.name ?? "";
+
+      setWorkItemId(typeof id === "number" && Number.isFinite(id) ? id : null);
+      setWorkItemTitle((workItemFields["System.Title"] as string) ?? "");
+      setDevOpsProjectName(projectName);
+
+      if (orgName && projectName) {
+        setDevOpsBaseUrl(
+          `https://dev.azure.com/${orgName}/${encodeURIComponent(projectName)}`,
+        );
+      } else if (orgName) {
+        setDevOpsBaseUrl(`https://dev.azure.com/${orgName}`);
+      } else {
+        setDevOpsBaseUrl("");
+      }
+    },
+    [sdk],
+  );
+
   useEffect(() => {
     async function init() {
       try {
         await sdk.ready();
+        const svc = await sdk.getService<IWorkItemFormService>(
+          WORK_ITEM_FORM_SERVICE_ID,
+        );
+        const normalizedService = svc as unknown as IFormServiceSubset;
 
-        // Register the extension with the host so it knows we have successfully
-        // loaded — clears the "taking longer than expected to load" warning.
         sdk.register(sdk.getContributionId(), () => ({
-          onLoaded: async (_args: unknown) => {
-            // Could re-read fields here if needed
+          onLoaded: async () => {
+            await syncWorkItemContext(normalizedService);
+            sdk.resize();
           },
-          onSaved: async (args: { id: number }) => {
-            setWorkItemId(args.id);
+          onRefreshed: async () => {
+            await syncWorkItemContext(normalizedService);
+            sdk.resize();
+          },
+          onReset: async () => {
+            await syncWorkItemContext(normalizedService);
+            sdk.resize();
+          },
+          onSaved: async () => {
+            await syncWorkItemContext(normalizedService);
+            sdk.resize();
+          },
+          onFieldChanged: async (args: { changedFields?: string[] }) => {
+            if (
+              !args.changedFields ||
+              args.changedFields.some((field) =>
+                ["System.Title", "System.TeamProject"].includes(field),
+              )
+            ) {
+              await syncWorkItemContext(normalizedService);
+              sdk.resize();
+            }
+          },
+          onUnloaded: () => {
+            setWorkItemId(null);
+            setWorkItemTitle("");
+            setDevOpsProjectName("");
+            setDevOpsBaseUrl("");
           },
         }));
 
-        const { WorkItemTrackingServiceIds } = await import(
-          "azure-devops-extension-api/WorkItemTracking"
-        );
-
-        const svc = await sdk.getService<
-          import("azure-devops-extension-api/WorkItemTracking").IWorkItemFormService
-        >(WorkItemTrackingServiceIds.WorkItemFormService);
-
-        const [id, titleRaw] = await Promise.all([
-          svc.getId(),
-          svc.getFieldValue("System.Title", { returnOriginalValue: false }),
-        ]);
-
-        setWorkItemId(id);
-        setWorkItemTitle((titleRaw as string) ?? "");
-        // Cast to our subset interface — avoids importing the full SDK type in the extension
-        setFormService(svc as unknown as IFormServiceSubset);
-
-        // ── Build DevOps context ───────────────────────────────────────
-        // getHost() returns { name: orgName, ... }
-        // getPageContext() returns { project: { name: "Hidrauvit", ... }, ... }
-        const hostCtx = sdk.getHost();
-        // pageContext is typed loosely in the SDK — use unknown cast
-        const pageCtx = sdk.getPageContext() as
-          | { project?: { name?: string } }
-          | undefined;
-
-        const orgName = hostCtx?.name ?? "";
-        const projectName = pageCtx?.project?.name ?? "";
-
-        setDevOpsProjectName(projectName);
-
-        if (orgName && projectName) {
-          setDevOpsBaseUrl(
-            `https://dev.azure.com/${orgName}/${encodeURIComponent(projectName)}`,
-          );
-        } else if (orgName) {
-          setDevOpsBaseUrl(`https://dev.azure.com/${orgName}`);
-        }
+        setFormService(normalizedService);
+        await syncWorkItemContext(normalizedService);
 
         setSdkReady(true);
         sdk.resize();
       } catch (err) {
         console.error("[OptSolv Extension] SDK init error:", err);
-        // Fallback — render the UI without DevOps context (e.g., local dev iframe)
         setSdkReady(true);
       }
     }
 
     void init();
-  }, [sdk]);
+  }, [sdk, syncWorkItemContext]);
 
   if (!sdkReady) {
     return <LoadingSpinner />;

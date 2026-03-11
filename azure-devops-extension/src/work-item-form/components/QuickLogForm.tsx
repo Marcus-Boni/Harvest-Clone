@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { CreateTimeEntryPayload } from "../../shared/api";
+import type { CreateTimeEntryPayload, IFormServiceSubset } from "../../shared/api";
 import { syncWorkItemFields } from "../../shared/api";
+import { resolveProjectIdFromDevOpsContext } from "../../shared/project-matching";
 import type { Project } from "../../shared/types";
-
-interface DevOpsFormService {
-  getFieldValue: (
-    field: string,
-    options?: { returnOriginalValue: boolean },
-  ) => Promise<unknown>;
-  setFieldValue: (field: string, value: unknown) => Promise<void>;
-  save?: () => Promise<void>;
-}
 
 export interface QuickLogFormProps {
   projects: Project[];
@@ -20,30 +12,9 @@ export interface QuickLogFormProps {
   devOpsProjectName: string;
   /** Current Azure DevOps organisation + project slug used to build work-item URL */
   devOpsBaseUrl: string;
-  formService: DevOpsFormService | null;
+  formService: IFormServiceSubset | null;
   onCreated: () => void;
   onCreateEntry: (payload: CreateTimeEntryPayload) => Promise<unknown>;
-}
-
-/** Find the best-match project ID from the list given a DevOps project name */
-function resolveInitialProjectId(
-  projects: Project[],
-  devOpsProjectName: string,
-): string {
-  if (projects.length === 0) return "";
-  if (!devOpsProjectName) return projects[0].id;
-
-  const needle = devOpsProjectName.toLowerCase();
-  // Exact match first
-  const exact = projects.find((p) => p.name.toLowerCase() === needle);
-  if (exact) return exact.id;
-  // Partial match (either direction)
-  const partial = projects.find(
-    (p) =>
-      p.name.toLowerCase().includes(needle) ||
-      needle.includes(p.name.toLowerCase()),
-  );
-  return partial?.id ?? projects[0].id;
 }
 
 export function QuickLogForm({
@@ -60,7 +31,7 @@ export function QuickLogForm({
 
   // Pre-select project matching the DevOps project context
   const [projectId, setProjectId] = useState(() =>
-    resolveInitialProjectId(projects, devOpsProjectName),
+    resolveProjectIdFromDevOpsContext(projects, devOpsProjectName),
   );
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(today);
@@ -81,7 +52,7 @@ export function QuickLogForm({
         // Only override if the current selection is empty or not in the list
         const stillValid = projects.some((p) => p.id === prev);
         if (prev && stillValid) return prev;
-        return resolveInitialProjectId(projects, devOpsProjectName);
+        return resolveProjectIdFromDevOpsContext(projects, devOpsProjectName);
       });
     }
   }, [projects, devOpsProjectName]);

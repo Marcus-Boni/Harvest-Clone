@@ -1,10 +1,11 @@
 import { getStoredApiUrl, getStoredToken } from "./auth";
+import { resolveSchedulingHours, toNumericHours } from "./scheduling";
 import type {
   ActiveTimer,
   ExtensionUser,
   Project,
-  WorkItemTimeData,
   TimeEntry,
+  WorkItemTimeData,
 } from "./types";
 
 function apiUrl(path: string): string {
@@ -21,8 +22,13 @@ function authHeaders(): HeadersInit {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const isGet = method === "GET";
+
   const res = await fetch(apiUrl(path), {
     ...init,
+    method,
+    cache: isGet ? "no-store" : init?.cache,
     headers: { ...authHeaders(), ...(init?.headers ?? {}) },
   });
 
@@ -43,7 +49,9 @@ export async function getMe(): Promise<ExtensionUser> {
 // ── Projects ─────────────────────────────────────────────────────────────────
 
 export async function getProjects(): Promise<Project[]> {
-  const data = await apiFetch<{ projects: Project[] }>("/api/extension/projects");
+  const data = await apiFetch<{ projects: Project[] }>(
+    "/api/extension/projects",
+  );
   return data.projects;
 }
 
@@ -72,17 +80,22 @@ export interface CreateTimeEntryPayload {
 export async function createTimeEntry(
   payload: CreateTimeEntryPayload,
 ): Promise<TimeEntry> {
-  const data = await apiFetch<{ entry: TimeEntry }>("/api/extension/time-entries", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  const data = await apiFetch<{ entry: TimeEntry }>(
+    "/api/extension/time-entries",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
   return data.entry;
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
 
 export async function getTimer(): Promise<ActiveTimer | null> {
-  const data = await apiFetch<{ timer: ActiveTimer | null }>("/api/extension/timer");
+  const data = await apiFetch<{ timer: ActiveTimer | null }>(
+    "/api/extension/timer",
+  );
   return data.timer;
 }
 
@@ -120,11 +133,17 @@ export async function stopTimer(): Promise<TimeEntry> {
  * Keeps the type compatible with the real SDK without importing it.
  */
 export interface IFormServiceSubset {
+  getId: () => Promise<number>;
   getFieldValue: (
     field: string,
     options?: { returnOriginalValue: boolean },
   ) => Promise<unknown>;
+  getFieldValues?: (
+    fields: string[],
+    options?: { returnOriginalValue: boolean },
+  ) => Promise<Record<string, unknown>>;
   setFieldValue: (field: string, value: unknown) => Promise<void>;
+  setFieldValues?: (fields: Record<string, unknown>) => Promise<unknown>;
   /** Available in newer SDK versions — gracefully skipped if absent */
   save?: () => Promise<void>;
 }
@@ -132,7 +151,7 @@ export interface IFormServiceSubset {
 export interface WorkItemFieldUpdate {
   completedWork: number; // hours
   remainingWork: number; // hours
-  saved: boolean;        // whether save() was called successfully
+  saved: boolean; // whether save() was called successfully
 }
 
 /**
@@ -151,38 +170,64 @@ export async function syncWorkItemFields(
   durationMinutes: number,
 ): Promise<WorkItemFieldUpdate> {
   const durationHours = durationMinutes / 60;
-
-  // Read current values in parallel
-  const [rawCompleted, rawRemaining] = await Promise.all([
-    formService.getFieldValue("Microsoft.VSTS.Scheduling.CompletedWork", {
-      returnOriginalValue: false,
-    }),
-    formService.getFieldValue("Microsoft.VSTS.Scheduling.RemainingWork", {
-      returnOriginalValue: false,
-    }),
-  ]);
-
-  const currentCompleted =
-    typeof rawCompleted === "number" ? rawCompleted : 0;
-  const currentRemaining =
-    typeof rawRemaining === "number" ? rawRemaining : 0;
-
-  const newCompleted =
-    Math.round((currentCompleted + durationHours) * 100) / 100;
-  const newRemaining = Math.max(
-    0,
-    Math.round((currentRemaining - durationHours) * 100) / 100,
-  );
-
-  // Write both fields back
-  await formService.setFieldValue(
+  const fieldNames = [
     "Microsoft.VSTS.Scheduling.CompletedWork",
-    newCompleted,
-  );
-  await formService.setFieldValue(
     "Microsoft.VSTS.Scheduling.RemainingWork",
-    newRemaining,
+    "Microsoft.VSTS.Scheduling.OriginalEstimate",
+  ];
+  const fieldValues = formService.getFieldValues
+    ? await formService.getFieldValues(fieldNames, {
+        returnOriginalValue: false,
+      })
+    : {
+        "Microsoft.VSTS.Scheduling.CompletedWork":
+          await formService.getFieldValue(
+            "Microsoft.VSTS.Scheduling.CompletedWork",
+            {
+              returnOriginalValue: false,
+            },
+          ),
+        "Microsoft.VSTS.Scheduling.RemainingWork":
+          await formService.getFieldValue(
+            "Microsoft.VSTS.Scheduling.RemainingWork",
+            {
+              returnOriginalValue: false,
+            },
+          ),
+        "Microsoft.VSTS.Scheduling.OriginalEstimate":
+          await formService.getFieldValue(
+            "Microsoft.VSTS.Scheduling.OriginalEstimate",
+            {
+              returnOriginalValue: false,
+            },
+          ),
+      };
+
+  const currentCompleted = toNumericHours(
+    fieldValues["Microsoft.VSTS.Scheduling.CompletedWork"],
   );
+  const updatedFields = resolveSchedulingHours({
+    completedWork: fieldValues["Microsoft.VSTS.Scheduling.CompletedWork"],
+    remainingWork: fieldValues["Microsoft.VSTS.Scheduling.RemainingWork"],
+    originalEstimate: fieldValues["Microsoft.VSTS.Scheduling.OriginalEstimate"],
+    nextCompletedWork: currentCompleted + durationHours,
+  });
+
+  if (formService.setFieldValues) {
+    await formService.setFieldValues({
+      "Microsoft.VSTS.Scheduling.CompletedWork": updatedFields.completedWork,
+      "Microsoft.VSTS.Scheduling.RemainingWork": updatedFields.remainingWork,
+    });
+  } else {
+    await formService.setFieldValue(
+      "Microsoft.VSTS.Scheduling.CompletedWork",
+      updatedFields.completedWork,
+    );
+    await formService.setFieldValue(
+      "Microsoft.VSTS.Scheduling.RemainingWork",
+      updatedFields.remainingWork,
+    );
+  }
 
   // Persist to DevOps — save() is required, setFieldValue alone only marks dirty
   let saved = false;
@@ -196,5 +241,9 @@ export async function syncWorkItemFields(
     }
   }
 
-  return { completedWork: newCompleted, remainingWork: newRemaining, saved };
+  return {
+    completedWork: updatedFields.completedWork,
+    remainingWork: updatedFields.remainingWork,
+    saved,
+  };
 }

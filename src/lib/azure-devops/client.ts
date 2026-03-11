@@ -4,6 +4,7 @@ import type {
   WorkItemState,
   WorkItemType,
 } from "@/types/azure-devops";
+import { resolveSchedulingHours } from "./scheduling";
 
 export class AzureDevOpsError extends Error {
   constructor(
@@ -126,42 +127,31 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
   async function updateCompletedWork(
     workItemId: number,
     completedWorkHours: number,
-    deltaHours?: number,
   ): Promise<boolean> {
     try {
+      const current = await fetchApi<{
+        fields: Record<string, unknown>;
+      }>(
+        `${orgUrl}/_apis/wit/workitems/${workItemId}?fields=Microsoft.VSTS.Scheduling.CompletedWork,Microsoft.VSTS.Scheduling.RemainingWork,Microsoft.VSTS.Scheduling.OriginalEstimate&api-version=7.1`,
+      );
+      const updatedFields = resolveSchedulingHours({
+        completedWork: current.fields["Microsoft.VSTS.Scheduling.CompletedWork"],
+        remainingWork: current.fields["Microsoft.VSTS.Scheduling.RemainingWork"],
+        originalEstimate: current.fields["Microsoft.VSTS.Scheduling.OriginalEstimate"],
+        nextCompletedWork: completedWorkHours,
+      });
       const patches: Array<{ op: string; path: string; value: number }> = [
         {
           op: "add",
           path: "/fields/Microsoft.VSTS.Scheduling.CompletedWork",
-          value: completedWorkHours,
+          value: updatedFields.completedWork,
         },
-      ];
-
-      // Optionally subtract the delta from RemainingWork
-      if (deltaHours !== undefined && deltaHours > 0) {
-        // Read current RemainingWork first
-        const current = await fetchApi<{
-          fields: Record<string, unknown>;
-        }>(
-          `${orgUrl}/_apis/wit/workitems/${workItemId}?fields=Microsoft.VSTS.Scheduling.RemainingWork&api-version=7.1`,
-        );
-        const currentRemaining =
-          typeof current.fields["Microsoft.VSTS.Scheduling.RemainingWork"] ===
-          "number"
-            ? (current.fields[
-                "Microsoft.VSTS.Scheduling.RemainingWork"
-              ] as number)
-            : 0;
-        const newRemaining = Math.max(
-          0,
-          Math.round((currentRemaining - deltaHours) * 100) / 100,
-        );
-        patches.push({
+        {
           op: "add",
           path: "/fields/Microsoft.VSTS.Scheduling.RemainingWork",
-          value: newRemaining,
-        });
-      }
+          value: updatedFields.remainingWork,
+        },
+      ];
 
       await fetchApi(
         `${orgUrl}/_apis/wit/workitems/${workItemId}?api-version=7.1`,
@@ -176,7 +166,7 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
       return true;
     } catch (error) {
       console.error(
-        `[AzDO] Failed to update CompletedWork for WI#${workItemId}:`,
+        `[AzDO] Failed to update scheduling fields for WI#${workItemId}:`,
         error,
       );
       return false;
