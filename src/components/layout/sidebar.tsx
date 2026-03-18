@@ -66,6 +66,11 @@ const managementNav = [
     href: "/dashboard/timesheets/approvals",
     icon: CheckSquare,
   },
+  {
+    name: "Horas da Equipe",
+    href: "/dashboard/team-hours",
+    icon: Clock,
+  },
   { name: "Equipe", href: "/dashboard/people", icon: Users },
   { name: "Configurações", href: "/dashboard/settings", icon: Settings },
 ];

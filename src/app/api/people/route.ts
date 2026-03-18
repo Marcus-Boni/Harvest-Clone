@@ -20,6 +20,7 @@ export async function GET(req: Request): Promise<Response> {
         id: user.id,
         name: user.name,
         email: user.email,
+        image: user.image,
         role: user.role,
         department: user.department,
         isActive: user.isActive,

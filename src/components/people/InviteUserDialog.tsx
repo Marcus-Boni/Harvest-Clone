@@ -206,7 +206,7 @@ export default function InviteUserDialog({
           </motion.div>
         </AnimatePresence>
 
-        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-0">
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button
             variant="ghost"
             onClick={handleClose}

@@ -22,17 +22,5 @@
   },
   "[jsonc]": {
     "editor.defaultFormatter": "biomejs.biome"
-  },
-  "conventionalCommits.scopes": [
-    "amt",
-    "core",
-    "ui",
-    "api",
-    "shared",
-    "auth",
-    "infra",
-    "config",
-    "deps",
-    "release"
-  ]
+  }
 }

@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -26,12 +26,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, getInitials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export interface PersonData {
   id: string;
   name: string;
   email: string;
+  image: string | null;
   role: string;
   department: string | null;
   isActive: boolean;
@@ -168,18 +169,11 @@ export default function PersonCard({
           )}
         >
           <CardContent className="flex items-center gap-4 pt-5 pb-5">
-            <Avatar className="h-12 w-12 border border-border">
-              <AvatarFallback
-                className={cn(
-                  "font-semibold",
-                  person.isActive
-                    ? "bg-brand-500/10 text-brand-500"
-                    : "bg-muted text-muted-foreground",
-                )}
-              >
-                {getInitials(person.name || "?")}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              name={person.name || "?"} 
+              image={person.image} 
+              size="lg" 
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">
                 {person.name || "Usuário"}

@@ -15,7 +15,7 @@ export interface UserAvatarProps {
   /** Imagem do usuário: pode ser URL externa ou data URI base64 (Microsoft OAuth) */
   image?: string | null;
   /** Tamanho do avatar */
-  size?: "sm" | "default" | "lg";
+  size?: "sm" | "default" | "lg" | "xl";
   /** Classes CSS adicionais para o wrapper Avatar */
   className?: string;
 }
@@ -24,6 +24,7 @@ const imgSizeMap = {
   sm: "h-6 w-6",
   default: "h-8 w-8",
   lg: "h-10 w-10",
+  xl: "h-12 w-12",
 } as const;
 
 export function UserAvatar({
