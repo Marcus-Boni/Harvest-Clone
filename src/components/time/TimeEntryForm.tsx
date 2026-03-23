@@ -2,7 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { CalendarClock } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { OutlookMeetingDrawer } from "@/components/time/OutlookMeetingDrawer";
@@ -13,6 +14,7 @@ import {
 } from "@/components/time/TimeEntryFormFields";
 import { Button } from "@/components/ui/button";
 import type { TimeEntry } from "@/hooks/use-time-entries";
+import { getTimePreferences, saveTimePreference } from "@/lib/time-preferences";
 import { parseLocalDate } from "@/lib/utils";
 
 const schema = z.object({
@@ -63,12 +65,14 @@ interface TimeEntryFormProps {
 function getDefaultValues(
   initialValues?: TimeEntryFormInitialValues,
 ): TimeEntryFormValues {
+  const preferences = getTimePreferences();
+
   return {
-    projectId: initialValues?.projectId ?? "",
+    projectId: initialValues?.projectId ?? preferences.lastProjectId ?? "",
     description: initialValues?.description ?? "",
     date: initialValues?.date ? parseLocalDate(initialValues.date) : new Date(),
-    duration: initialValues?.duration ?? 60,
-    billable: initialValues?.billable ?? true,
+    duration: initialValues?.duration ?? preferences.defaultDuration,
+    billable: initialValues?.billable ?? preferences.defaultBillable,
   };
 }
 
@@ -85,7 +89,10 @@ export function TimeEntryForm({
     title: string;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitMode, setSubmitMode] = useState<"close" | "continue">("close");
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const submitModeRef = useRef<"close" | "continue">(
+    getTimePreferences().submitMode,
+  );
 
   const form = useForm<TimeEntryFormValues>({
     resolver: zodResolver(schema),
@@ -110,8 +117,13 @@ export function TimeEntryForm({
   }, [loadProjects, open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setMobileSheetOpen(false);
+      return;
+    }
 
+    const preferences = getTimePreferences();
+    submitModeRef.current = preferences.submitMode;
     form.reset(getDefaultValues(initialValues));
 
     if (initialValues?.azureWorkItemId && initialValues.azureWorkItemTitle) {
@@ -127,6 +139,35 @@ export function TimeEntryForm({
   const selectedDate = form.watch("date");
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
 
+  const handleOutlookEvent = useCallback(
+    (event: { subject: string; start: { dateTime: string }; end: { dateTime: string } }) => {
+      const parseUtc = (iso: string) =>
+        new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
+      form.setValue("description", event.subject || "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      form.setValue("date", parseUtc(event.start.dateTime), {
+        shouldDirty: true,
+      });
+      form.setValue(
+        "duration",
+        Math.max(
+          1,
+          Math.round(
+            (parseUtc(event.end.dateTime).getTime() -
+              parseUtc(event.start.dateTime).getTime()) /
+              60000,
+          ),
+        ),
+        { shouldDirty: true, shouldValidate: true },
+      );
+      // Fecha o sheet mobile após selecionar a reunião
+      setMobileSheetOpen(false);
+    },
+    [form],
+  );
+
   async function handleSubmit(values: TimeEntryFormValues) {
     setSubmitting(true);
 
@@ -141,7 +182,14 @@ export function TimeEntryForm({
         azureWorkItemTitle: workItem?.title,
       });
 
-      if (mode === "create" && submitMode === "continue") {
+      if (mode === "create") {
+        saveTimePreference("lastProjectId", values.projectId);
+        saveTimePreference("defaultBillable", values.billable);
+        saveTimePreference("defaultDuration", values.duration);
+        saveTimePreference("submitMode", submitModeRef.current);
+      }
+
+      if (mode === "create" && submitModeRef.current === "continue") {
         form.reset({
           projectId: values.projectId,
           description: "",
@@ -156,7 +204,6 @@ export function TimeEntryForm({
       onOpenChange(false);
     } finally {
       setSubmitting(false);
-      setSubmitMode("close");
     }
   }
 
@@ -164,32 +211,9 @@ export function TimeEntryForm({
     <OutlookMeetingDrawer
       open={open}
       selectedDate={selectedDateStr}
-      onSelectEvent={(event) => {
-        const parseUtc = (iso: string) =>
-          new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
-        form.setValue("description", event.subject || "", {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
-        form.setValue("date", parseUtc(event.start.dateTime), {
-          shouldDirty: true,
-        });
-        form.setValue(
-          "duration",
-          Math.max(
-            1,
-            Math.round(
-              (parseUtc(event.end.dateTime).getTime() -
-                parseUtc(event.start.dateTime).getTime()) /
-                60000,
-            ),
-          ),
-          {
-            shouldDirty: true,
-            shouldValidate: true,
-          },
-        );
-      }}
+      onSelectEvent={handleOutlookEvent}
+      mobileSheetOpen={mobileSheetOpen}
+      onMobileSheetOpenChange={setMobileSheetOpen}
     />
   );
 
@@ -220,29 +244,62 @@ export function TimeEntryForm({
 
         <div className="border-t border-border/60 bg-background/90 px-5 py-4 sm:px-6">
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+              {/* Botão agenda — icon-only para não causar overflow no mobile */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground min-[1360px]:hidden"
+                onClick={() => setMobileSheetOpen(true)}
+                title="Abrir agenda do Outlook"
+              >
+                <CalendarClock className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {mode === "create" ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => { submitModeRef.current = "continue"; }}
+                >
+                  {submitting && submitModeRef.current === "continue"
+                    ? "Salvando..."
+                    : "Criar e continuar"}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
+                  onClick={() => { submitModeRef.current = "close"; }}
+                >
+                  {submitting && submitModeRef.current === "close"
+                    ? "Salvando..."
+                    : "Criar lançamento"}
+                </Button>
+              </div>
+            ) : (
               <Button
                 type="submit"
                 disabled={submitting}
                 className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
-                onClick={() => setSubmitMode("close")}
               >
-                {submitting && submitMode === "close"
-                  ? "Salvando..."
-                  : mode === "edit"
-                    ? "Salvar alterações"
-                    : "Criar lançamento"}
+                {submitting ? "Salvando..." : "Salvar alterações"}
               </Button>
-            </div>
+            )}
           </div>
         </div>
       </form>

@@ -30,7 +30,6 @@ export function QuickEntryDialog() {
 
     toast.success("Registro de tempo criado com sucesso!");
     dispatchTimeEntriesUpdated();
-    closeQuickEntry();
   };
 
   return (

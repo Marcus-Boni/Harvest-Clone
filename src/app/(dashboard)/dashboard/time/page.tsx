@@ -4,33 +4,28 @@ import {
   endOfISOWeek,
   endOfMonth,
   format,
-  isToday,
+  getISOWeek,
+  getISOWeekYear,
   startOfISOWeek,
   startOfMonth,
 } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { ClipboardPlus, Copy } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DailyCapacityBar } from "@/components/time/DailyCapacityBar";
 import { DayView } from "@/components/time/DayView";
 import { MonthView } from "@/components/time/MonthView";
 import { TimeEntryForm } from "@/components/time/TimeEntryForm";
 import { TimerWidget } from "@/components/time/TimerWidget";
 import { type TimeView, TimeViewTabs } from "@/components/time/TimeViewTabs";
-import { WeeklyCapacityBar } from "@/components/time/WeeklyCapacityBar";
 import { WeekView } from "@/components/time/WeekView";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCapacity } from "@/hooks/use-capacity";
 import {
   getEventDurationMinutes,
   type OutlookEvent,
 } from "@/hooks/use-outlook-events";
 import { type TimeEntry, useTimeEntries } from "@/hooks/use-time-entries";
+import { useTimesheets } from "@/hooks/use-timesheets";
 import { useSession } from "@/lib/auth-client";
-import { formatDuration } from "@/lib/utils";
+import { getTimePreferences, saveTimePreference } from "@/lib/time-preferences";
 import { useUIStore } from "@/stores/ui.store";
 
 const containerVariants = {
@@ -60,29 +55,9 @@ interface Project {
   azureProjectId?: string | null;
 }
 
-function getViewSummary(view: TimeView, selectedDate: Date) {
-  if (view === "day") {
-    return {
-      eyebrow: isToday(selectedDate) ? "Hoje" : "Dia selecionado",
-      title: format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }),
-      description:
-        "Registre rápido, revise o dia e use a agenda lateral apenas quando precisar.",
-    };
-  }
-
-  if (view === "week") {
-    return {
-      eyebrow: "Semana",
-      title: `${format(startOfISOWeek(selectedDate), "d MMM", { locale: ptBR })} - ${format(endOfISOWeek(selectedDate), "d MMM yyyy", { locale: ptBR })}`,
-      description: "Distribua horas com visão semanal simples e direta.",
-    };
-  }
-
-  return {
-    eyebrow: "Mês",
-    title: format(selectedDate, "MMMM yyyy", { locale: ptBR }),
-    description: "Encontre gaps sem poluição visual e volte ao dia certo.",
-  };
+function getWeekPeriod(date: Date) {
+  const weekStart = startOfISOWeek(date);
+  return `${getISOWeekYear(weekStart)}-W${getISOWeek(weekStart).toString().padStart(2, "0")}`;
 }
 
 export default function TimePage() {
@@ -94,45 +69,37 @@ export default function TimePage() {
   const openQuickEntry = useUIStore((state) => state.openQuickEntry);
   const setTimePageDate = useUIStore((state) => state.setTimePageDate);
 
-  const [activeView, setActiveView] = useState<TimeView>("day");
+  const [activeView, setActiveView] = useState<TimeView>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [projects, setProjects] = useState<Project[]>([]);
   const [editTarget, setEditTarget] = useState<TimeEntry | undefined>();
+  const [weekTimesheet, setWeekTimesheet] = useState<{
+    id: string;
+    status: string;
+  } | null>(null);
 
   const dateRange = useMemo(() => {
-    if (activeView === "day") {
+    if (activeView === "month") {
       return {
-        from: format(startOfISOWeek(selectedDate), "yyyy-MM-dd"),
-        to: format(endOfISOWeek(selectedDate), "yyyy-MM-dd"),
-      };
-    }
-
-    if (activeView === "week") {
-      return {
-        from: format(startOfISOWeek(selectedDate), "yyyy-MM-dd"),
-        to: format(endOfISOWeek(selectedDate), "yyyy-MM-dd"),
+        from: format(startOfMonth(selectedDate), "yyyy-MM-dd"),
+        to: format(endOfMonth(selectedDate), "yyyy-MM-dd"),
       };
     }
 
     return {
-      from: format(startOfMonth(selectedDate), "yyyy-MM-dd"),
-      to: format(endOfMonth(selectedDate), "yyyy-MM-dd"),
+      from: format(startOfISOWeek(selectedDate), "yyyy-MM-dd"),
+      to: format(endOfISOWeek(selectedDate), "yyyy-MM-dd"),
     };
   }, [activeView, selectedDate]);
 
-  const { entries, loading, updateEntry, deleteEntry, refetch } =
+  const { entries, loading, createEntry, updateEntry, deleteEntry, refetch } =
     useTimeEntries({
       from: dateRange.from,
       to: dateRange.to,
     });
 
-  const {
-    capacity,
-    loading: capacityLoading,
-    refetch: refetchCapacity,
-  } = useCapacity({
-    referenceDate: selectedDate,
-    weeklyCapacityHours,
+  const { getOrCreateTimesheet, submitTimesheet } = useTimesheets(undefined, {
+    enabled: false,
   });
 
   const loadProjects = useCallback(async () => {
@@ -152,6 +119,17 @@ export default function TimePage() {
   }, [loadProjects]);
 
   useEffect(() => {
+    const preferredView = getTimePreferences().defaultView;
+    if (
+      preferredView === "day" ||
+      preferredView === "week" ||
+      preferredView === "month"
+    ) {
+      setActiveView(preferredView);
+    }
+  }, []);
+
+  useEffect(() => {
     setTimePageDate(format(selectedDate, "yyyy-MM-dd"));
   }, [selectedDate, setTimePageDate]);
 
@@ -162,18 +140,53 @@ export default function TimePage() {
     [setTimePageDate],
   );
 
-  const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-  const selectedDayEntries = useMemo(
-    () => entries.filter((entry) => entry.date === selectedDateStr),
-    [entries, selectedDateStr],
-  );
-  const selectedDayMinutes = selectedDayEntries.reduce(
+  useEffect(() => {
+    let cancelled = false;
+
+    if (activeView !== "week") {
+      setWeekTimesheet(null);
+      return;
+    }
+
+    async function syncWeekTimesheet() {
+      try {
+        const timesheet = await getOrCreateTimesheet(
+          getWeekPeriod(selectedDate),
+          "weekly",
+        );
+
+        if (!cancelled) {
+          setWeekTimesheet({
+            id: timesheet.id,
+            status: timesheet.status,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setWeekTimesheet(null);
+        }
+      }
+    }
+
+    void syncWeekTimesheet();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, getOrCreateTimesheet, selectedDate]);
+
+  const latestEntry = entries[0];
+  const dailyTargetMinutes = Math.round((weeklyCapacityHours * 60) / 5);
+  const weekEntryCount = entries.length;
+  const weekTotalMinutes = entries.reduce(
     (sum, entry) => sum + entry.duration,
     0,
   );
-  const latestEntry = selectedDayEntries[0] ?? entries[0];
-  const viewSummary = getViewSummary(activeView, selectedDate);
-  const dailyTargetMinutes = Math.round((weeklyCapacityHours * 60) / 5);
+
+  const handleViewChange = useCallback((view: TimeView) => {
+    setActiveView(view);
+    saveTimePreference("defaultView", view);
+  }, []);
 
   const openCreate = useCallback(
     (overrides?: {
@@ -188,18 +201,18 @@ export default function TimePage() {
       openQuickEntry({
         date: overrides?.date ?? format(selectedDate, "yyyy-MM-dd"),
         initialValues: {
-          billable: overrides?.billable ?? latestEntry?.billable ?? true,
+          billable: overrides?.billable,
           date: overrides?.date ?? format(selectedDate, "yyyy-MM-dd"),
           description: overrides?.description ?? "",
-          duration: overrides?.duration ?? 60,
-          projectId: overrides?.projectId ?? latestEntry?.projectId,
+          duration: overrides?.duration,
+          projectId: overrides?.projectId,
           azureWorkItemId: overrides?.azureWorkItemId,
           azureWorkItemTitle: overrides?.azureWorkItemTitle,
         },
         source: "time-page",
       });
     },
-    [latestEntry, openQuickEntry, selectedDate],
+    [openQuickEntry, selectedDate],
   );
 
   const handleUpdate = useCallback(
@@ -216,9 +229,8 @@ export default function TimePage() {
 
       await updateEntry(editTarget.id, data);
       setEditTarget(undefined);
-      refetchCapacity();
     },
-    [editTarget, refetchCapacity, updateEntry],
+    [editTarget, updateEntry],
   );
 
   const handleEdit = useCallback((entry: TimeEntry) => {
@@ -228,9 +240,8 @@ export default function TimePage() {
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteEntry(id);
-      refetchCapacity();
     },
-    [deleteEntry, refetchCapacity],
+    [deleteEntry],
   );
 
   const handleDuplicate = useCallback(
@@ -269,6 +280,49 @@ export default function TimePage() {
     setActiveView("day");
   }, []);
 
+  const handleMoveEntry = useCallback(
+    async (entryId: string, newDate: string) => {
+      await updateEntry(entryId, { date: newDate });
+    },
+    [updateEntry],
+  );
+
+  const handleDuplicateEntry = useCallback(
+    async (entryId: string, newDate: string) => {
+      const entry = entries.find((candidate) => candidate.id === entryId);
+      if (!entry) {
+        throw new Error("Registro nao encontrado");
+      }
+
+      await createEntry({
+        projectId: entry.projectId,
+        description: entry.description,
+        date: newDate,
+        duration: entry.duration,
+        billable: entry.billable,
+        azureWorkItemId: entry.azureWorkItemId ?? undefined,
+        azureWorkItemTitle: entry.azureWorkItemTitle ?? undefined,
+      });
+    },
+    [createEntry, entries],
+  );
+
+  const handleSubmitWeek = useCallback(async () => {
+    if (!weekTimesheet) return;
+
+    await submitTimesheet(weekTimesheet.id);
+
+    const refreshed = await getOrCreateTimesheet(
+      getWeekPeriod(selectedDate),
+      "weekly",
+    );
+
+    setWeekTimesheet({
+      id: refreshed.id,
+      status: refreshed.status,
+    });
+  }, [getOrCreateTimesheet, selectedDate, submitTimesheet, weekTimesheet]);
+
   return (
     <motion.div
       variants={containerVariants}
@@ -276,97 +330,18 @@ export default function TimePage() {
       animate="visible"
       className="space-y-5"
     >
-      <motion.section
-        variants={itemVariants}
-        className="rounded-[28px] border border-border/60 bg-card/90 p-5 shadow-sm"
-      >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <Badge
-              variant="secondary"
-              className="w-fit rounded-full bg-brand-500/10 text-brand-500"
-            >
-              {viewSummary.eyebrow}
-            </Badge>
-            <div>
-              <h1 className="font-display text-3xl font-semibold capitalize text-foreground">
-                {viewSummary.title}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {viewSummary.description}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <TimeViewTabs
-              activeView={activeView}
-              onViewChange={setActiveView}
-            />
-            <Button
-              className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
-              onClick={() => openCreate()}
-            >
-              <ClipboardPlus className="mr-2 h-4 w-4" />
-              Novo registro
-            </Button>
-          </div>
+      <motion.section variants={itemVariants}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="font-display text-3xl font-semibold text-foreground">
+            Registro de Tempo
+          </h1>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Badge className="rounded-full bg-brand-500/10 px-3 py-1.5 text-brand-500">
-            {formatDuration(selectedDayMinutes)} no dia
-          </Badge>
-          <Badge variant="outline" className="rounded-full px-3 py-1.5">
-            Meta {formatDuration(dailyTargetMinutes)}
-          </Badge>
-          <Badge variant="outline" className="rounded-full px-3 py-1.5">
-            Recente: {latestEntry?.project.name ?? "sem histórico"}
-          </Badge>
-        </div>
-
-        <div className="mt-4 rounded-[24px] border border-border/60 bg-background/70 p-4">
-          {capacityLoading || !capacity ? (
-            <div className="space-y-3">
-              <Skeleton className="h-8 w-full rounded-lg" />
-              <Skeleton className="h-8 w-full rounded-lg" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <WeeklyCapacityBar
-                loggedMinutes={capacity.weeklyLoggedMinutes}
-                capacityMinutes={capacity.weeklyCapacityMinutes}
-                remainingMinutes={capacity.weeklyRemainingMinutes}
-                percentage={capacity.weeklyPercentage}
-              />
-              <DailyCapacityBar
-                loggedMinutes={capacity.dailyLoggedMinutes}
-                targetMinutes={capacity.dailyTargetMinutes}
-                remainingMinutes={capacity.dailyRemainingMinutes}
-                percentage={capacity.dailyPercentage}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            className="rounded-full"
-            onClick={() => openCreate()}
-          >
-            <ClipboardPlus className="mr-2 h-4 w-4" />
-            Lançar manualmente
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-full"
-            onClick={() => latestEntry && handleDuplicate(latestEntry)}
-            disabled={!latestEntry}
-          >
-            <Copy className="mr-2 h-4 w-4" />
-            Duplicar última
-          </Button>
+        <div className="mt-3">
+          <TimeViewTabs
+            activeView={activeView}
+            onViewChange={handleViewChange}
+          />
         </div>
       </motion.section>
 
@@ -395,10 +370,18 @@ export default function TimePage() {
             onReferenceDateChange={setSelectedDate}
             dailyTargetMinutes={dailyTargetMinutes}
             onDayClick={handleDayClick}
-            onOpenCreate={() => openCreate()}
             onOpenCreateForDate={(date) =>
               openCreate({ date: format(date, "yyyy-MM-dd") })
             }
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onMoveEntry={handleMoveEntry}
+            onDuplicateEntry={handleDuplicateEntry}
+            onSubmitWeek={handleSubmitWeek}
+            weekTimesheetStatus={weekTimesheet?.status ?? null}
+            weekEntryCount={weekEntryCount}
+            weekTotalMinutes={weekTotalMinutes}
           />
         ) : (
           <MonthView
@@ -416,7 +399,6 @@ export default function TimePage() {
           projects={projects}
           onEntrySaved={() => {
             refetch();
-            refetchCapacity();
           }}
         />
       </motion.section>

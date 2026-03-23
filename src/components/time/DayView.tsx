@@ -7,11 +7,20 @@ import {
   format,
   isSameDay,
   isToday,
+  isWeekend,
   startOfISOWeek,
   subDays,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { motion } from "framer-motion";
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Plus,
+  Zap,
+} from "lucide-react";
 import { useMemo } from "react";
 import { TimeEntryCard } from "@/components/time/TimeEntryCard";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +30,7 @@ import {
   useOutlookEvents,
 } from "@/hooks/use-outlook-events";
 import type { TimeEntry } from "@/hooks/use-time-entries";
-import { formatDuration } from "@/lib/utils";
+import { cn, formatDuration } from "@/lib/utils";
 
 interface DayViewProps {
   entries: TimeEntry[];
@@ -37,6 +46,8 @@ interface DayViewProps {
 function normalizeText(value: string | null | undefined): string {
   return (value ?? "").trim().toLocaleLowerCase("pt-BR");
 }
+
+const dailyTarget = 8 * 60;
 
 export function DayView({
   entries,
@@ -62,6 +73,9 @@ export function DayView({
     (sum, entry) => sum + entry.duration,
     0,
   );
+  const percentage = dailyTarget > 0 ? Math.min(totalMinutes / dailyTarget, 1) : 0;
+  const remainingMinutes = dailyTarget - totalMinutes;
+  const isComplete = remainingMinutes <= 0;
 
   const entriesByDate = useMemo(() => {
     const map = new Map<string, TimeEntry[]>();
@@ -89,171 +103,312 @@ export function DayView({
   );
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-[28px] border border-border/60 bg-card/90 p-5 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full"
-                onClick={() => onSelectedDateChange(subDays(selectedDate, 1))}
-                aria-label="Dia anterior"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full"
-                onClick={() => onSelectedDateChange(addDays(selectedDate, 1))}
-                aria-label="Próximo dia"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div>
-              <h2 className="font-display text-3xl font-semibold text-foreground">
-                {isToday(selectedDate) ? "Hoje:" : ""}{" "}
-                {format(selectedDate, "EEEE, d MMM", { locale: ptBR })}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Registro simples, rápido e orientado ao dia.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Badge className="rounded-full bg-brand-500/10 px-3 py-1.5 text-brand-500">
-              {formatDuration(totalMinutes)} no dia
-            </Badge>
+    <div className="space-y-3">
+      {/* Header card */}
+      <section className="rounded-[28px] border border-border/60 bg-card/90 shadow-sm">
+        {/* Title row */}
+        <div className="flex flex-col gap-3 px-6 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
             <Button
-              className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
-              onClick={onOpenCreate}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => onSelectedDateChange(subDays(selectedDate, 1))}
+              aria-label="Dia anterior"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Registrar tempo
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          </div>
-        </div>
 
-        <div className="mt-5 grid gap-3 xl:grid-cols-[88px_minmax(0,1fr)]">
+            <h2 className="font-display text-xl font-semibold text-foreground">
+              {isToday(selectedDate) && (
+                <span className="mr-1 text-brand-500">Hoje,</span>
+              )}
+              {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </h2>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => onSelectedDateChange(addDays(selectedDate, 1))}
+              aria-label="Próximo dia"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            {!isToday(selectedDate) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs text-muted-foreground"
+                onClick={() => onSelectedDateChange(new Date())}
+              >
+                Ir para hoje
+              </Button>
+            )}
+          </div>
+
           <Button
-            className="h-16 rounded-[22px] bg-[#1f8f3a] text-white hover:bg-[#187330] xl:h-[88px] xl:w-[72px]"
+            size="default"
+            className="rounded-full bg-brand-500 px-5 text-white hover:bg-brand-600"
             onClick={onOpenCreate}
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="mr-2 h-4 w-4" />
+            Registrar tempo
           </Button>
+        </div>
 
-          <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-8">
+        {/* Week strip */}
+        <div className="mt-5 px-6">
+          <div className="grid grid-cols-7 gap-1.5">
             {weekDays.map((day) => {
               const dayKey = format(day, "yyyy-MM-dd");
               const dayMinutes = (entriesByDate.get(dayKey) ?? []).reduce(
                 (sum, entry) => sum + entry.duration,
                 0,
               );
+              const selected = isSameDay(day, selectedDate);
+              const today = isToday(day);
+              const weekend = isWeekend(day);
+              const dayPct = dailyTarget > 0 ? Math.min(dayMinutes / dailyTarget, 1) : 0;
+              const dayComplete = dayPct >= 1;
 
               return (
                 <button
                   key={dayKey}
                   type="button"
                   onClick={() => onSelectedDateChange(day)}
-                  className={
-                    "rounded-[20px] border px-3 py-3 text-left transition " +
-                    (isSameDay(day, selectedDate)
-                      ? "border-brand-500/50 bg-brand-500/5"
-                      : "border-border/60 bg-background/70 hover:border-brand-500/30")
-                  }
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-2xl px-1 py-3 transition-all",
+                    selected
+                      ? "bg-foreground/5 ring-1 ring-foreground/10"
+                      : "hover:bg-muted/40",
+                    weekend && !selected && "opacity-50",
+                  )}
                 >
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     {format(day, "EEE", { locale: ptBR })}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">
+                  </span>
+
+                  {/* Day number chip */}
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                      selected && today
+                        ? "bg-brand-500 text-white"
+                        : selected
+                          ? "bg-foreground text-background"
+                          : today
+                            ? "text-brand-500"
+                            : "text-foreground",
+                    )}
+                  >
                     {format(day, "d")}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatDuration(dayMinutes)}
-                  </p>
-                  {isToday(day) ? (
-                    <p className="mt-2 text-[11px] font-medium text-brand-500">
-                      Hoje
-                    </p>
-                  ) : null}
+                  </span>
+
+                  {/* Duration */}
+                  <span
+                    className={cn(
+                      "text-[10px] font-medium",
+                      dayMinutes > 0 ? "text-foreground/70" : "text-muted-foreground/40",
+                    )}
+                  >
+                    {dayMinutes > 0 ? formatDuration(dayMinutes) : "—"}
+                  </span>
+
+                  {/* Progress bar */}
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-muted/50">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        dayComplete
+                          ? "bg-emerald-500"
+                          : dayMinutes > 0
+                            ? "bg-brand-500"
+                            : "bg-transparent",
+                      )}
+                      style={{ width: `${Math.max(dayPct * 100, dayMinutes > 0 ? 10 : 0)}%` }}
+                    />
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {outlook.connected !== false && pendingMeetings.length > 0 ? (
-          <div className="mt-4 flex flex-col gap-3 rounded-[22px] border border-brand-500/20 bg-brand-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">
-                {pendingMeetings.length} reuniões disponíveis para completar o
-                dia
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Use a próxima reunião ou abra a agenda lateral no modal.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={() => onCreateFromOutlook(pendingMeetings[0])}
-              >
-                Usar próxima reunião
-              </Button>
-              <Button className="rounded-full" onClick={onOpenCreate}>
-                Abrir agenda
-              </Button>
+        {/* Daily progress */}
+        <div className="px-6 pb-6 pt-4">
+          <div className="flex items-center gap-4">
+            <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="flex flex-1 items-center gap-3">
+              <span className="min-w-fit text-sm font-medium text-foreground">
+                {formatDuration(totalMinutes)}
+                <span className="ml-1 font-normal text-muted-foreground">
+                  / {formatDuration(dailyTarget)}
+                </span>
+              </span>
+              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted/50">
+                <motion.div
+                  className={cn(
+                    "h-full rounded-full",
+                    isComplete ? "bg-emerald-500" : "bg-brand-500",
+                  )}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(percentage * 100, 100)}%` }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                />
+              </div>
+              <span className="min-w-fit text-xs text-muted-foreground">
+                {isComplete
+                  ? remainingMinutes < 0
+                    ? `+${formatDuration(Math.abs(remainingMinutes))}`
+                    : "Completo"
+                  : `faltam ${formatDuration(remainingMinutes)}`}
+              </span>
             </div>
           </div>
-        ) : null}
+        </div>
       </section>
 
-      <section className="rounded-[28px] border border-border/60 bg-card/85 shadow-sm">
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-5 py-4 sm:px-6">
-          <div>
-            <h3 className="font-display text-lg font-semibold text-foreground">
-              Horas do dia
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Lista direta para editar, duplicar ou ajustar.
-            </p>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {dayEntries.length} itens
-          </span>
-        </div>
+      {/* Meeting indicator */}
+      {outlook.connected !== false && pendingMeetings.length > 0 && (
+        <section className="rounded-[28px] border border-border/60 bg-card/90 shadow-sm">
+          <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/50">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {pendingMeetings.length}{" "}
+                  {pendingMeetings.length === 1
+                    ? "reunião disponível"
+                    : "reuniões disponíveis"}{" "}
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 rounded-full px-2 py-0 text-[10px]"
+                  >
+                    Outlook
+                  </Badge>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Importe para completar o dia rapidamente
+                </p>
+              </div>
+            </div>
 
-        <div className="space-y-0 px-5 py-2 sm:px-6">
-          {dayEntries.length === 0 ? (
-            <div className="px-2 py-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                Nenhum lançamento registrado para este dia.
-              </p>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                className="mt-4 rounded-full"
+                size="sm"
+                className="rounded-full"
                 onClick={onOpenCreate}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Calendar className="mr-1.5 h-3.5 w-3.5" />
+                Ver agenda
+              </Button>
+              <Button
+                size="sm"
+                className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
+                onClick={() => onCreateFromOutlook(pendingMeetings[0])}
+              >
+                <Zap className="mr-1.5 h-3.5 w-3.5" />
+                Importar próxima
+              </Button>
+            </div>
+          </div>
+
+          {/* Meeting chips */}
+          {pendingMeetings.length > 1 && (
+            <div className="border-t border-border/40 px-5 py-3">
+              <div className="flex flex-wrap gap-1.5">
+                {pendingMeetings.slice(0, 5).map((meeting) => (
+                  <button
+                    key={meeting.id}
+                    type="button"
+                    onClick={() => onCreateFromOutlook(meeting)}
+                    className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs text-foreground/70 transition hover:border-border hover:bg-muted/60 hover:text-foreground"
+                  >
+                    <span className="max-w-48 truncate font-medium">
+                      {meeting.subject || "Sem título"}
+                    </span>
+                  </button>
+                ))}
+                {pendingMeetings.length > 5 && (
+                  <span className="flex items-center px-1 text-xs text-muted-foreground">
+                    +{pendingMeetings.length - 5}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Entries list */}
+      <section className="rounded-[28px] border border-border/60 bg-card/85 shadow-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <h3 className="font-display text-base font-semibold text-foreground">
+              Lançamentos
+            </h3>
+            <span className="rounded-full bg-muted/60 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+              {dayEntries.length}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="rounded-full text-xs text-muted-foreground hover:text-foreground"
+            onClick={onOpenCreate}
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Adicionar
+          </Button>
+        </div>
+
+        <div className="px-3 py-2 sm:px-4">
+          {dayEntries.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-2 py-12 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40">
+                <Clock className="h-5 w-5 text-muted-foreground/50" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Nenhum lançamento ainda
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Comece registrando seu primeiro tempo do dia
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 rounded-full"
+                onClick={onOpenCreate}
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
                 Criar primeiro lançamento
               </Button>
             </div>
           ) : (
-            dayEntries.map((entry) => (
-              <TimeEntryCard
-                key={entry.id}
-                entry={entry}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onDuplicate={onDuplicate}
-              />
-            ))
+            <div className="divide-y divide-border/40">
+              {dayEntries.map((entry, index) => (
+                <motion.div
+                  key={entry.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                >
+                  <TimeEntryCard
+                    entry={entry}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onDuplicate={onDuplicate}
+                  />
+                </motion.div>
+              ))}
+            </div>
           )}
         </div>
       </section>

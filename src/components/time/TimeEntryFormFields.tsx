@@ -28,9 +28,11 @@ import { cn } from "@/lib/utils";
 export const durationPresets = [
   { label: "15m", minutes: 15 },
   { label: "30m", minutes: 30 },
+  { label: "45m", minutes: 45 },
   { label: "1h", minutes: 60 },
   { label: "1h30", minutes: 90 },
   { label: "2h", minutes: 120 },
+  { label: "3h", minutes: 180 },
 ];
 
 export interface TimeEntryFormValues {

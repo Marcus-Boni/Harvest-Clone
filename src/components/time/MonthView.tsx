@@ -157,13 +157,6 @@ export function MonthView({
           <Badge className="rounded-full bg-brand-500/10 px-3 py-1.5 text-brand-500">
             {formatCompactDuration(monthTotal)} no mês
           </Badge>
-          <Button
-            className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
-            onClick={onOpenCreate}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo registro
-          </Button>
         </div>
       </div>
 
