@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -12,7 +11,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +23,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { signIn } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "success";
@@ -68,6 +69,7 @@ function AcceptInviteContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false);
 
   const validateToken = useCallback(async () => {
     if (!token) {
@@ -139,6 +141,20 @@ function AcceptInviteContent() {
       toast.error("Erro inesperado. Tente novamente.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleMicrosoftLogin() {
+    setIsMicrosoftLoading(true);
+
+    const { error } = await signIn.social({
+      provider: "microsoft",
+      callbackURL: "/dashboard",
+    });
+
+    if (error) {
+      toast.error(error.message || "Erro ao tentar login com Microsoft");
+      setIsMicrosoftLoading(false);
     }
   }
 
@@ -316,6 +332,67 @@ function AcceptInviteContent() {
                   Complete seu cadastro para acessar a plataforma
                 </CardDescription>
 
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2.5 border-border/50 py-5 text-sm font-medium"
+                  onClick={handleMicrosoftLogin}
+                  disabled={isMicrosoftLoading || isSubmitting}
+                >
+                  {isMicrosoftLoading ? (
+                    <>
+                      <Loader2
+                        className="mr-2 h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                      Entrando...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 21 21"
+                        aria-hidden="true"
+                      >
+                        <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                        <rect
+                          x="11"
+                          y="1"
+                          width="9"
+                          height="9"
+                          fill="#7fba00"
+                        />
+                        <rect
+                          x="1"
+                          y="11"
+                          width="9"
+                          height="9"
+                          fill="#00a4ef"
+                        />
+                        <rect
+                          x="11"
+                          y="11"
+                          width="9"
+                          height="9"
+                          fill="#ffb900"
+                        />
+                      </svg>
+                      Entrar com Microsoft (recomendado)
+                    </>
+                  )}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      ou
+                    </span>
+                  </div>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nome completo</Label>
@@ -445,7 +522,10 @@ function AcceptInviteContent() {
                     type="submit"
                     className="w-full bg-brand-500 py-5 font-semibold text-white hover:bg-brand-600"
                     disabled={
-                      isSubmitting || !name.trim() || password.length < 8
+                      isSubmitting ||
+                      isMicrosoftLoading ||
+                      !name.trim() ||
+                      password.length < 8
                     }
                     aria-busy={isSubmitting}
                   >
