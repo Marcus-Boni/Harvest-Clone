@@ -147,9 +147,14 @@ export function WeekView({
   const isEntryDraggable = useCallback((entry: TimeEntry) => {
     const status = entry.timesheet?.status;
     return (
-      entry.timesheetId === null || status === "open" || status === "rejected"
+      entry.timesheetId === null ||
+      status === "open" ||
+      status === "rejected" ||
+      status === "submitted"
     );
   }, []);
+
+  const isResubmission = weekTimesheetStatus === "submitted";
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -256,14 +261,22 @@ export function WeekView({
 
     try {
       await onSubmitWeek();
-      toast.success("Semana submetida com sucesso.");
+      toast.success(
+        isResubmission
+          ? "Semana re-submetida com sucesso."
+          : "Semana submetida com sucesso.",
+      );
       setConfirmSubmit(false);
     } catch {
-      toast.error("Erro ao submeter semana.");
+      toast.error(
+        isResubmission
+          ? "Erro ao re-submeter semana."
+          : "Erro ao submeter semana.",
+      );
     } finally {
       setSubmitting(false);
     }
-  }, [onSubmitWeek]);
+  }, [isResubmission, onSubmitWeek]);
 
   return (
     <section className="overflow-hidden rounded-[28px] border border-border/60 bg-card/90 shadow-sm">
@@ -317,12 +330,28 @@ export function WeekView({
             </Badge>
 
             {weekTimesheetStatus === "submitted" ? (
-              <Badge
-                variant="outline"
-                className="rounded-full border-amber-300 px-3 py-1.5 text-amber-600"
-              >
-                Submetida
-              </Badge>
+              <>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-amber-300 px-3 py-1.5 text-amber-600"
+                >
+                  Submetida
+                </Badge>
+                {onSubmitWeek ? (
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setConfirmSubmit(true)}
+                    disabled={weekEntryCountValue === 0}
+                    title={
+                      weekEntryCountValue === 0 ? "Sem registros" : undefined
+                    }
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    Re-submeter semana
+                  </Button>
+                ) : null}
+              </>
             ) : weekTimesheetStatus === "approved" ? (
               <Badge
                 variant="outline"
@@ -414,10 +443,12 @@ export function WeekView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Submeter semana {weekNumber} de {weekYear}?
+              {isResubmission ? "Re-submeter" : "Submeter"} semana {weekNumber}{" "}
+              de {weekYear}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Isso enviará {weekEntryCountValue} registro(s) (
+              Isso {isResubmission ? "reenviará" : "enviará"}{" "}
+              {weekEntryCountValue} registro(s) (
               {formatDuration(weekTotalMinutesValue)}) para aprovação.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -433,7 +464,13 @@ export function WeekView({
                 void handleSubmitWeekClick();
               }}
             >
-              {submitting ? "Submetendo..." : "Submeter"}
+              {submitting
+                ? isResubmission
+                  ? "Re-submetendo..."
+                  : "Submetendo..."
+                : isResubmission
+                  ? "Re-submeter"
+                  : "Submeter"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -500,9 +537,7 @@ function DroppableColumn({
             <span
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg font-display text-base font-bold",
-                today
-                  ? "bg-brand-500 text-white"
-                  : "text-foreground",
+                today ? "bg-brand-500 text-white" : "text-foreground",
               )}
             >
               {format(day, "d")}
@@ -650,7 +685,8 @@ function EntryCard({
   const isEditable =
     entry.timesheetId === null ||
     entry.timesheet?.status === "open" ||
-    entry.timesheet?.status === "rejected";
+    entry.timesheet?.status === "rejected" ||
+    entry.timesheet?.status === "submitted";
 
   return (
     <div

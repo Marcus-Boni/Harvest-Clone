@@ -43,8 +43,18 @@ function formatPeriodLabel(period: string): string {
   const monthMatch = period.match(/^(\d{4})-(\d{2})$/);
   if (monthMatch) {
     const months = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
     ];
     return `${months[parseInt(monthMatch[2], 10) - 1]} de ${monthMatch[1]}`;
   }
@@ -70,6 +80,7 @@ function SubmitButton({
 }) {
   const isEmpty = ts.totalMinutes === 0;
   const isSubmitting = submitting === ts.id;
+  const isResubmission = ts.status === "submitted";
 
   if (isEmpty) {
     return (
@@ -82,7 +93,7 @@ function SubmitButton({
               disabled
             >
               <Send className="h-3.5 w-3.5" />
-              Submeter
+              {isResubmission ? "Re-submeter" : "Submeter"}
             </Button>
           </span>
         </TooltipTrigger>
@@ -101,7 +112,13 @@ function SubmitButton({
       onClick={() => onSubmit(ts.id)}
     >
       <Send className="h-3.5 w-3.5" />
-      {isSubmitting ? "Enviando…" : "Submeter"}
+      {isSubmitting
+        ? isResubmission
+          ? "Re-enviando…"
+          : "Enviando…"
+        : isResubmission
+          ? "Re-submeter"
+          : "Submeter"}
     </Button>
   );
 }
@@ -153,11 +170,20 @@ function CurrentWeekCard({ ts, submitting, onSubmit }: TimesheetCardProps) {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {(ts.status === "open" || ts.status === "rejected") && (
-              <SubmitButton ts={ts} submitting={submitting} onSubmit={onSubmit} />
+            {(ts.status === "open" ||
+              ts.status === "rejected" ||
+              ts.status === "submitted") && (
+              <SubmitButton
+                ts={ts}
+                submitting={submitting}
+                onSubmit={onSubmit}
+              />
             )}
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/dashboard/timesheets/${ts.id}`} aria-label="Ver detalhes do timesheet">
+              <Link
+                href={`/dashboard/timesheets/${ts.id}`}
+                aria-label="Ver detalhes do timesheet"
+              >
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -168,7 +194,11 @@ function CurrentWeekCard({ ts, submitting, onSubmit }: TimesheetCardProps) {
   );
 }
 
-function PendingTimesheetCard({ ts, submitting, onSubmit }: TimesheetCardProps) {
+function PendingTimesheetCard({
+  ts,
+  submitting,
+  onSubmit,
+}: TimesheetCardProps) {
   return (
     <Card className="border-border/40 bg-card/80 backdrop-blur transition-colors hover:border-border/60">
       <CardContent className="py-4">
@@ -206,7 +236,10 @@ function PendingTimesheetCard({ ts, submitting, onSubmit }: TimesheetCardProps) 
           <div className="flex shrink-0 items-center gap-2">
             <SubmitButton ts={ts} submitting={submitting} onSubmit={onSubmit} />
             <Button variant="ghost" size="icon" asChild>
-              <Link href={`/dashboard/timesheets/${ts.id}`} aria-label="Ver detalhes do timesheet">
+              <Link
+                href={`/dashboard/timesheets/${ts.id}`}
+                aria-label="Ver detalhes do timesheet"
+              >
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -235,7 +268,10 @@ function HistoryTimesheetCard({ ts }: { ts: Timesheet }) {
         </div>
 
         <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link href={`/dashboard/timesheets/${ts.id}`} aria-label="Ver detalhes do timesheet">
+          <Link
+            href={`/dashboard/timesheets/${ts.id}`}
+            aria-label="Ver detalhes do timesheet"
+          >
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -278,7 +314,9 @@ export default function TimesheetsPage() {
       router.push(`/dashboard/timesheets/${timesheet.id}`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Não foi possível abrir a semana atual.",
+        err instanceof Error
+          ? err.message
+          : "Não foi possível abrir a semana atual.",
       );
     } finally {
       setOpeningCurrentWeek(false);
@@ -292,7 +330,9 @@ export default function TimesheetsPage() {
         await submitTimesheet(id);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Não foi possível submeter o timesheet.",
+          err instanceof Error
+            ? err.message
+            : "Não foi possível submeter o timesheet.",
         );
       } finally {
         setSubmitting(null);
@@ -303,127 +343,125 @@ export default function TimesheetsPage() {
 
   return (
     <TooltipProvider>
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-8"
-    >
-      {/* Header */}
       <motion.div
-        variants={itemVariants}
-        className="flex items-center justify-between"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
       >
-        <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">
-            Timesheets
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Submeta suas horas semanais para aprovação.
-          </p>
-        </div>
-        <Button
-          className="bg-brand-500 text-white hover:bg-brand-600"
-          disabled={openingCurrentWeek}
-          onClick={handleOpenCurrentWeek}
-        >
-          {openingCurrentWeek ? "Abrindo…" : "Semana Atual"}
-        </Button>
-      </motion.div>
-
-      {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
-            <Skeleton key={i} className="h-24 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : timesheets.length === 0 ? (
+        {/* Header */}
         <motion.div
           variants={itemVariants}
-          className="rounded-lg border border-dashed border-border py-16 text-center"
+          className="flex items-center justify-between"
         >
-          <p className="text-sm text-muted-foreground">
-            Nenhum timesheet encontrado. Use o botão "Semana Atual" para começar.
-          </p>
+          <div>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              Timesheets
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Submeta suas horas semanais para aprovação.
+            </p>
+          </div>
+          <Button
+            className="bg-brand-500 text-white hover:bg-brand-600"
+            disabled={openingCurrentWeek}
+            onClick={handleOpenCurrentWeek}
+          >
+            {openingCurrentWeek ? "Abrindo…" : "Semana Atual"}
+          </Button>
         </motion.div>
-      ) : (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-8"
-        >
-          {/* Zona 1: Semana Atual */}
-          {currentWeekTs && (
-            <motion.div variants={itemVariants}>
-              <CurrentWeekCard
-                ts={currentWeekTs}
-                submitting={submitting}
-                onSubmit={handleSubmit}
-              />
-            </motion.div>
-          )}
 
-          {/* Zona 2: Ações Pendentes */}
-          {pendingTimesheets.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Ações pendentes
-                </h2>
-                <Badge variant="outline" className="text-xs">
-                  {pendingTimesheets.length}
-                </Badge>
-              </div>
-              <div className="space-y-3">
-                {pendingTimesheets.map((ts) => (
-                  <PendingTimesheetCard
-                    key={ts.id}
-                    ts={ts}
-                    submitting={submitting}
-                    onSubmit={handleSubmit}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+              <Skeleton key={i} className="h-24 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : timesheets.length === 0 ? (
+          <motion.div
+            variants={itemVariants}
+            className="rounded-lg border border-dashed border-border py-16 text-center"
+          >
+            <p className="text-sm text-muted-foreground">
+              Nenhum timesheet encontrado. Use o botão "Semana Atual" para
+              começar.
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            {/* Zona 1: Semana Atual */}
+            {currentWeekTs && (
+              <motion.div variants={itemVariants}>
+                <CurrentWeekCard
+                  ts={currentWeekTs}
+                  submitting={submitting}
+                  onSubmit={handleSubmit}
+                />
+              </motion.div>
+            )}
 
-          {/* Zona 3: Histórico */}
-          {historyTimesheets.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Histórico
-                </h2>
-                <Badge variant="outline" className="text-xs">
-                  {historyTimesheets.length}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {visibleHistory.map((ts) => (
-                  <HistoryTimesheetCard
-                    key={ts.id}
-                    ts={ts}
-                  />
-                ))}
-              </div>
-              {remainingHistory > 0 && (
-                <div className="flex justify-center pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setVisibleHistoryCount((c) => c + 10)}
-                  >
-                    Ver mais ({remainingHistory})
-                  </Button>
+            {/* Zona 2: Ações Pendentes */}
+            {pendingTimesheets.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Ações pendentes
+                  </h2>
+                  <Badge variant="outline" className="text-xs">
+                    {pendingTimesheets.length}
+                  </Badge>
                 </div>
-              )}
-            </motion.div>
-          )}
-        </motion.div>
-      )}
-    </motion.div>
+                <div className="space-y-3">
+                  {pendingTimesheets.map((ts) => (
+                    <PendingTimesheetCard
+                      key={ts.id}
+                      ts={ts}
+                      submitting={submitting}
+                      onSubmit={handleSubmit}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Zona 3: Histórico */}
+            {historyTimesheets.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Histórico
+                  </h2>
+                  <Badge variant="outline" className="text-xs">
+                    {historyTimesheets.length}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {visibleHistory.map((ts) => (
+                    <HistoryTimesheetCard key={ts.id} ts={ts} />
+                  ))}
+                </div>
+                {remainingHistory > 0 && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setVisibleHistoryCount((c) => c + 10)}
+                    >
+                      Ver mais ({remainingHistory})
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </motion.div>
     </TooltipProvider>
   );
 }

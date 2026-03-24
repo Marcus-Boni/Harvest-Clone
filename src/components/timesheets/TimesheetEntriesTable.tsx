@@ -70,7 +70,7 @@ const columns: ColumnDef<TimesheetEntry>[] = [
     accessorKey: "description",
     header: "Descrição",
     cell: ({ row }) => (
-      <div className="min-w-0 max-w-85 space-y-1">
+      <div className="min-w-0 max-w-88 space-y-1 xl:max-w-lg 2xl:max-w-2xl">
         <p className="truncate font-medium text-foreground">
           {row.original.description || "Sem descrição"}
         </p>
@@ -354,7 +354,7 @@ export function TimesheetEntriesTable({ entries }: TimesheetEntriesTableProps) {
       </div>
 
       <div className="hidden overflow-hidden rounded-xl border border-border/60 bg-card/60 md:block">
-        <Table>
+        <Table className="table-fixed" containerClassName="overflow-x-hidden">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent">
@@ -401,7 +401,9 @@ export function TimesheetEntriesTable({ entries }: TimesheetEntriesTableProps) {
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        cell.column.id === "duration" && "text-right",
+                        cell.column.id === "duration"
+                          ? "text-right whitespace-nowrap"
+                          : "whitespace-normal",
                       )}
                     >
                       {flexRender(

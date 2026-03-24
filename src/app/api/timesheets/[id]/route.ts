@@ -134,11 +134,15 @@ export async function PATCH(
       if (ts.userId !== session.user.id) {
         return Response.json({ error: "Sem permissão." }, { status: 403 });
       }
-      if (ts.status !== "open" && ts.status !== "rejected") {
+      if (
+        ts.status !== "open" &&
+        ts.status !== "rejected" &&
+        ts.status !== "submitted"
+      ) {
         return Response.json(
           {
             error:
-              "Apenas timesheets abertos ou rejeitados podem ser submetidos.",
+              "Apenas timesheets abertos, rejeitados ou submetidos podem ser submetidos.",
           },
           { status: 400 },
         );
@@ -188,6 +192,7 @@ export async function PATCH(
           submittedAt: new Date(),
           totalMinutes: totals?.totalMinutes ?? 0,
           billableMinutes: totals?.billableMinutes ?? 0,
+          rejectionReason: null,
         })
         .where(eq(timesheet.id, id))
         .returning();

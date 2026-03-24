@@ -26,7 +26,8 @@ export function TimeEntryCard({
   onDuplicate,
 }: TimeEntryCardProps) {
   const isEditable =
-    !entry.timesheet || ["open", "rejected"].includes(entry.timesheet.status);
+    !entry.timesheet ||
+    ["open", "rejected", "submitted"].includes(entry.timesheet.status);
 
   return (
     <div
@@ -59,7 +60,9 @@ export function TimeEntryCard({
 
           <p className="text-sm leading-relaxed text-foreground/80">
             {entry.description || (
-              <span className="italic text-muted-foreground">Sem descrição</span>
+              <span className="italic text-muted-foreground">
+                Sem descrição
+              </span>
             )}
           </p>
 

@@ -222,18 +222,29 @@ export default function TimesheetDetailPage() {
     : null;
   const currentWeek = `${format(new Date(), "yyyy")}-W${getISOWeek(new Date()).toString().padStart(2, "0")}`;
   const isCurrentWeek = timesheet.period === currentWeek;
+  const canSubmit =
+    timesheet.status === "open" ||
+    timesheet.status === "rejected" ||
+    timesheet.status === "submitted";
+  const isResubmission = timesheet.status === "submitted";
 
   const handleSubmit = async () => {
     setSubmitting(true);
 
     try {
       await submitTimesheet();
-      toast.success("Timesheet submetido com sucesso.");
+      toast.success(
+        isResubmission
+          ? "Timesheet re-submetido com sucesso."
+          : "Timesheet submetido com sucesso.",
+      );
     } catch (submitError) {
       toast.error(
         submitError instanceof Error
           ? submitError.message
-          : "Não foi possível submeter o timesheet.",
+          : isResubmission
+            ? "Não foi possível re-submeter o timesheet."
+            : "Não foi possível submeter o timesheet.",
       );
     } finally {
       setSubmitting(false);
@@ -290,15 +301,20 @@ export default function TimesheetDetailPage() {
                 </div>
               </div>
 
-              {(timesheet.status === "open" ||
-                timesheet.status === "rejected") && (
+              {canSubmit && (
                 <Button
                   className="gap-2 self-start bg-brand-500 text-white hover:bg-brand-600 lg:ml-auto"
                   disabled={submitting || timesheet.entries.length === 0}
                   onClick={handleSubmit}
                 >
                   <Send className="h-4 w-4" />
-                  {submitting ? "Submetendo..." : "Submeter timesheet"}
+                  {submitting
+                    ? isResubmission
+                      ? "Re-submetendo..."
+                      : "Submetendo..."
+                    : isResubmission
+                      ? "Re-submeter timesheet"
+                      : "Submeter timesheet"}
                 </Button>
               )}
             </div>
@@ -403,7 +419,10 @@ export default function TimesheetDetailPage() {
       </motion.div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <motion.div variants={itemVariants} className="min-w-0 space-y-6">
+        <motion.div
+          variants={itemVariants}
+          className="order-1 min-w-0 space-y-6"
+        >
           <Card className="border-border/60 bg-card/80">
             <CardHeader>
               <CardTitle className="font-display text-lg">
@@ -473,23 +492,12 @@ export default function TimesheetDetailPage() {
               ))}
             </CardContent>
           </Card>
-
-          <Card className="border-border/60 bg-card/80">
-            <CardHeader>
-              <CardTitle className="font-display text-lg">
-                Detalhamento das entradas
-              </CardTitle>
-              <CardDescription>
-                Consulta completa dos registros lançados no período.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TimesheetEntriesTable entries={timesheet.entries} />
-            </CardContent>
-          </Card>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="min-w-0 space-y-6">
+        <motion.div
+          variants={itemVariants}
+          className="order-3 min-w-0 space-y-6 xl:order-2"
+        >
           <Card className="border-border/60 bg-card/80">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 font-display text-lg">
@@ -607,6 +615,25 @@ export default function TimesheetDetailPage() {
                   {timesheet.approver?.name ?? "Não definido"}
                 </span>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="order-2 min-w-0 xl:order-3 xl:col-span-2"
+        >
+          <Card className="border-border/60 bg-card/80">
+            <CardHeader>
+              <CardTitle className="font-display text-lg">
+                Detalhamento das entradas
+              </CardTitle>
+              <CardDescription>
+                Consulta completa dos registros lançados no período.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TimesheetEntriesTable entries={timesheet.entries} />
             </CardContent>
           </Card>
         </motion.div>
