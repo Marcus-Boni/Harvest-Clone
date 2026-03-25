@@ -9,11 +9,17 @@ export function resolveSchedulingHours(values: {
   remainingWork: unknown;
   originalEstimate: unknown;
   nextCompletedWork: number;
-}) {
+}): { completedWork: number; remainingWork: number | null } {
   const currentCompleted = toNumericHours(values.completedWork);
   const currentRemaining = toNumericHours(values.remainingWork);
   const originalEstimate = toNumericHours(values.originalEstimate);
   const nextCompletedWork = roundHours(values.nextCompletedWork);
+
+  // When there is no original estimate and no existing remaining work,
+  // only update CompletedWork — do not write RemainingWork at all.
+  if (originalEstimate <= 0 && currentRemaining <= 0) {
+    return { completedWork: nextCompletedWork, remainingWork: null };
+  }
 
   const baselineHours =
     originalEstimate > 0

@@ -150,8 +150,9 @@ export interface IFormServiceSubset {
 
 export interface WorkItemFieldUpdate {
   completedWork: number; // hours
-  remainingWork: number; // hours
+  remainingWork: number | null; // hours; null = field was not written
   saved: boolean; // whether save() was called successfully
+  skipped?: boolean; // true when sync was skipped (terminal work item state)
 }
 
 /**
@@ -174,6 +175,7 @@ export async function syncWorkItemFields(
     "Microsoft.VSTS.Scheduling.CompletedWork",
     "Microsoft.VSTS.Scheduling.RemainingWork",
     "Microsoft.VSTS.Scheduling.OriginalEstimate",
+    "System.State",
   ];
   const fieldValues = formService.getFieldValues
     ? await formService.getFieldValues(fieldNames, {
@@ -201,7 +203,23 @@ export async function syncWorkItemFields(
               returnOriginalValue: false,
             },
           ),
+        "System.State": await formService.getFieldValue("System.State", {
+          returnOriginalValue: false,
+        }),
       };
+
+  // Skip field updates only for states that are typically immutable.
+  // "Done" must still be synced for this extension workflow.
+  const TERMINAL_STATES = new Set(["Removed"]);
+  const workItemState = fieldValues["System.State"];
+  if (typeof workItemState === "string" && TERMINAL_STATES.has(workItemState)) {
+    return {
+      completedWork: 0,
+      remainingWork: null,
+      saved: false,
+      skipped: true,
+    };
+  }
 
   const currentCompleted = toNumericHours(
     fieldValues["Microsoft.VSTS.Scheduling.CompletedWork"],
@@ -213,20 +231,40 @@ export async function syncWorkItemFields(
     nextCompletedWork: currentCompleted + durationHours,
   });
 
+  // Some process templates require Remaining Work to stay empty on Done items.
+  // In that case we still sync Completed Work, but never write Remaining Work.
+  const shouldSkipRemainingWorkUpdate =
+    workItemState === "Done" ||
+    workItemState === "Closed" ||
+    workItemState === "Resolved";
+  const nextRemainingWork = shouldSkipRemainingWorkUpdate
+    ? null
+    : updatedFields.remainingWork;
+
+  // Only write RemainingWork when the scheduling logic determined it should be updated.
+  // When remainingWork is null (no original estimate + no existing remaining work),
+  // we intentionally leave the field untouched to match DevOps default behaviour.
+  const fieldsToUpdate: Record<string, unknown> = {
+    "Microsoft.VSTS.Scheduling.CompletedWork": updatedFields.completedWork,
+  };
+  if (nextRemainingWork !== null) {
+    fieldsToUpdate["Microsoft.VSTS.Scheduling.RemainingWork"] =
+      nextRemainingWork;
+  }
+
   if (formService.setFieldValues) {
-    await formService.setFieldValues({
-      "Microsoft.VSTS.Scheduling.CompletedWork": updatedFields.completedWork,
-      "Microsoft.VSTS.Scheduling.RemainingWork": updatedFields.remainingWork,
-    });
+    await formService.setFieldValues(fieldsToUpdate);
   } else {
     await formService.setFieldValue(
       "Microsoft.VSTS.Scheduling.CompletedWork",
       updatedFields.completedWork,
     );
-    await formService.setFieldValue(
-      "Microsoft.VSTS.Scheduling.RemainingWork",
-      updatedFields.remainingWork,
-    );
+    if (nextRemainingWork !== null) {
+      await formService.setFieldValue(
+        "Microsoft.VSTS.Scheduling.RemainingWork",
+        nextRemainingWork,
+      );
+    }
   }
 
   // Persist to DevOps — save() is required, setFieldValue alone only marks dirty
@@ -243,7 +281,7 @@ export async function syncWorkItemFields(
 
   return {
     completedWork: updatedFields.completedWork,
-    remainingWork: updatedFields.remainingWork,
+    remainingWork: nextRemainingWork,
     saved,
   };
 }

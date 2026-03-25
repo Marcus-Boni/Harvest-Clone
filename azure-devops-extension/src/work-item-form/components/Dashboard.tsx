@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import logoUrl from "../../assets/logo-white.svg";
+import type { IFormServiceSubset } from "../../shared/api";
 import {
   createTimeEntry,
   getProjects,
@@ -8,7 +9,6 @@ import {
   startTimer,
   stopTimer,
 } from "../../shared/api";
-import type { IFormServiceSubset } from "../../shared/api";
 import { clearCredentials } from "../../shared/auth";
 import type {
   ActiveTimer,
@@ -123,7 +123,9 @@ export function Dashboard({
     payload: Parameters<typeof startTimer>[0],
   ): Promise<void> {
     const previousTimer = timer;
-    const selectedProject = projects.find((project) => project.id === payload.projectId);
+    const selectedProject = projects.find(
+      (project) => project.id === payload.projectId,
+    );
 
     setTimer({
       id: `optimistic-${Date.now()}`,
@@ -175,13 +177,10 @@ export function Dashboard({
   }
 
   const workItemData = data ?? emptyWorkItemData(workItemId);
-  const totalHours = minutesToHours(workItemData.totalMinutes);
-  const myHours = minutesToHours(workItemData.myMinutes);
   const entryCount = workItemData.entries.length;
 
   // Timer running for THIS work item
-  const isTimerActive =
-    timer !== null && timer.azureWorkItemId === workItemId;
+  const isTimerActive = timer !== null && timer.azureWorkItemId === workItemId;
 
   return (
     <div style={s.container}>
@@ -222,17 +221,6 @@ export function Dashboard({
         </div>
       )}
 
-      {/* ── Stats row ───────────────────────────────────────────── */}
-      <div style={s.statsRow}>
-        <Stat label="Total" value={totalHours} />
-        <Stat label="Minhas horas" value={myHours} />
-        <Stat
-          label="Timer"
-          value={timer ? elapsedLabel(timer) : "—"}
-          highlight={isTimerActive}
-        />
-      </div>
-
       {/* ── Tabs ────────────────────────────────────────────────── */}
       <div style={s.tabs} role="tablist" aria-label="Modos de registro">
         <TabButton
@@ -247,10 +235,7 @@ export function Dashboard({
           label={
             isTimerActive ? (
               <>
-                <span
-                  style={s.timerDot}
-                  aria-label="Timer ativo"
-                />
+                <span style={s.timerDot} aria-label="Timer ativo" />
                 Timer
               </>
             ) : (
@@ -274,7 +259,11 @@ export function Dashboard({
       <div
         role="tabpanel"
         aria-labelledby={
-          tab === "log" ? "tab-log" : tab === "timer" ? "tab-timer" : "tab-history"
+          tab === "log"
+            ? "tab-log"
+            : tab === "timer"
+              ? "tab-timer"
+              : "tab-history"
         }
       >
         {tab === "log" && (
@@ -349,30 +338,6 @@ function TabButton({
   );
 }
 
-function Stat({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div style={s.statCard}>
-      <div style={s.statLabel}>{label}</div>
-      <div
-        style={{
-          ...s.statValue,
-          color: highlight ? "var(--brand)" : "var(--text)",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function Logo() {
   return (
     <div
@@ -391,28 +356,6 @@ function Logo() {
       <img src={logoUrl} alt="" width={12} height={12} />
     </div>
   );
-}
-
-function minutesToHours(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-function elapsedLabel(timer: ActiveTimer): string {
-  const now = Date.now();
-  const start = new Date(timer.startedAt).getTime();
-  const elapsed = timer.pausedAt
-    ? timer.accumulatedMs
-    : timer.accumulatedMs + (now - start);
-  const totalSecs = Math.floor(Math.max(0, elapsed) / 1000);
-  const h = Math.floor(totalSecs / 3600);
-  const m = Math.floor((totalSecs % 3600) / 60);
-  const sec = totalSecs % 60;
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  }
-  return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -481,26 +424,6 @@ const s: Record<string, React.CSSProperties> = {
     cursor: "pointer",
     padding: "2px 8px",
     flexShrink: 0,
-  },
-  statsRow: { display: "flex", gap: 6 },
-  statCard: {
-    flex: 1,
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--radius)",
-    padding: "7px 8px",
-  },
-  statLabel: {
-    fontSize: 9,
-    color: "var(--muted)",
-    marginBottom: 2,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  statValue: {
-    fontSize: 13,
-    fontWeight: 700,
-    fontVariantNumeric: "tabular-nums",
   },
   tabs: {
     display: "flex",

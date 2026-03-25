@@ -37,7 +37,9 @@ export function TimerControl({
     if (projects.length === 0) return;
 
     setProjectId((currentProjectId) => {
-      const stillValid = projects.some((project) => project.id === currentProjectId);
+      const stillValid = projects.some(
+        (project) => project.id === currentProjectId,
+      );
       if (currentProjectId && stillValid) return currentProjectId;
       return resolveProjectIdFromDevOpsContext(projects, devOpsProjectName);
     });
@@ -55,7 +57,8 @@ export function TimerControl({
         projectId,
         description: description || workItemTitle || "Timer",
         billable: true,
-        azureWorkItemId: workItemId ?? undefined,
+        azureWorkItemId:
+          workItemId != null && workItemId > 0 ? workItemId : undefined,
         azureWorkItemTitle: workItemTitle || undefined,
       });
     } catch (err) {

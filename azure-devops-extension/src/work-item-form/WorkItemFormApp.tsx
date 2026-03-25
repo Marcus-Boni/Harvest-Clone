@@ -1,16 +1,17 @@
+import type { IWorkItemFormService } from "azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices";
 import type * as SDK from "azure-devops-extension-sdk";
 import { useCallback, useEffect, useState } from "react";
 import type { IFormServiceSubset } from "../shared/api";
 import { isConfigured } from "../shared/auth";
 import { Dashboard } from "./components/Dashboard";
 import { SetupScreen } from "./components/SetupScreen";
-import type { IWorkItemFormService } from "azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices";
 
 interface WorkItemFormAppProps {
   sdk: typeof SDK;
 }
 
 const WORK_ITEM_FORM_SERVICE_ID = "ms.vss-work-web.work-item-form";
+const WORK_ITEM_FORM_GROUP_CONTRIBUTION_ID = "work-item-form-group";
 
 export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
   const [configured, setConfigured] = useState(isConfigured());
@@ -18,7 +19,9 @@ export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
   const [workItemTitle, setWorkItemTitle] = useState<string>("");
   const [devOpsProjectName, setDevOpsProjectName] = useState<string>("");
   const [devOpsBaseUrl, setDevOpsBaseUrl] = useState<string>("");
-  const [formService, setFormService] = useState<IFormServiceSubset | null>(null);
+  const [formService, setFormService] = useState<IFormServiceSubset | null>(
+    null,
+  );
   const [sdkReady, setSdkReady] = useState(false);
 
   const syncWorkItemContext = useCallback(
@@ -31,15 +34,21 @@ export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
             "System.Title": await service.getFieldValue("System.Title", {
               returnOriginalValue: false,
             }),
-            "System.TeamProject": await service.getFieldValue("System.TeamProject", {
-              returnOriginalValue: false,
-            }),
+            "System.TeamProject": await service.getFieldValue(
+              "System.TeamProject",
+              {
+                returnOriginalValue: false,
+              },
+            ),
           };
 
       const id = await service.getId().catch(() => null);
       const hostCtx = sdk.getHost();
       const pageCtx = sdk.getPageContext() as
-        | { project?: { name?: string }; webContext?: { project?: { name?: string } } }
+        | {
+            project?: { name?: string };
+            webContext?: { project?: { name?: string } };
+          }
         | undefined;
       const projectName =
         (workItemFields["System.TeamProject"] as string | undefined) ??
@@ -74,7 +83,9 @@ export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
         );
         const normalizedService = svc as unknown as IFormServiceSubset;
 
-        sdk.register(sdk.getContributionId(), () => ({
+        const contributionId =
+          sdk.getContributionId() || WORK_ITEM_FORM_GROUP_CONTRIBUTION_ID;
+        const contributionProvider = () => ({
           onLoaded: async () => {
             await syncWorkItemContext(normalizedService);
             sdk.resize();
@@ -108,7 +119,15 @@ export function WorkItemFormApp({ sdk }: WorkItemFormAppProps) {
             setDevOpsProjectName("");
             setDevOpsBaseUrl("");
           },
-        }));
+        });
+
+        sdk.register(contributionId, contributionProvider);
+        if (contributionId !== WORK_ITEM_FORM_GROUP_CONTRIBUTION_ID) {
+          sdk.register(
+            WORK_ITEM_FORM_GROUP_CONTRIBUTION_ID,
+            contributionProvider,
+          );
+        }
 
         setFormService(normalizedService);
         await syncWorkItemContext(normalizedService);

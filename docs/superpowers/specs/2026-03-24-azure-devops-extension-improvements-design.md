@@ -3,6 +3,7 @@
 **Date:** 2026-03-24
 **Files affected:**
 - `azure-devops-extension/src/work-item-form/components/QuickLogForm.tsx`
+- `azure-devops-extension/src/work-item-form/components/TimerControl.tsx`
 - `azure-devops-extension/src/work-item-form/components/Dashboard.tsx`
 - `azure-devops-extension/src/shared/api.ts`
 - `azure-devops-extension/src/shared/scheduling.ts`
@@ -12,134 +13,198 @@
 ## 1. Duration Select with Predefined Options
 
 ### Problem
-The current duration input consists of two separate `<input type="number">` fields (hours and minutes). This requires multiple interactions and is error-prone in the constrained space of a DevOps extension panel.
+The current duration input consists of two separate `<input type="number">` fields (`hours`/`minutes` state). This requires multiple interactions and is error-prone in the constrained space of a DevOps extension panel.
 
 ### Solution
-Replace the two number inputs with a single `<select>` element listing predefined durations. A "Personalizado..." option at the end reveals the original h/min inputs inline.
+Replace the two number inputs with a single `<select>` element listing predefined durations. A "Personalizado..." option at the end reveals inline h/min inputs.
 
 ### Predefined Options (value in minutes)
 ```
-15 min  → 15
-30 min  → 30
-45 min  → 45
-1h      → 60
-1h 15m  → 75
-1h 30m  → 90
-1h 45m  → 105
-2h      → 120
-2h 30m  → 150
-3h      → 180
-3h 30m  → 210
-4h      → 240
-5h      → 300
-6h      → 360
-7h      → 420
-8h      → 480
+15 min  → "15"
+30 min  → "30"
+45 min  → "45"
+1h      → "60"
+1h 15m  → "75"
+1h 30m  → "90"
+1h 45m  → "105"
+2h      → "120"
+2h 30m  → "150"
+3h      → "180"
+3h 30m  → "210"
+4h      → "240"
+5h      → "300"
+6h      → "360"
+7h      → "420"
+8h      → "480"
 Personalizado... → "custom"
 ```
 
+The select starts with a disabled placeholder option (`value=""`, text "Selecione a duração…").
+
 ### State Changes in `QuickLogForm`
-- Remove: `hours: string`, `minutes: string`
-- Add: `selectedDuration: string` (default `""` = placeholder/empty), `customHours: string`, `customMinutes: string`
-- Duration resolution logic:
-  ```ts
-  const totalMinutes =
-    selectedDuration === "custom"
-      ? (Number(customHours) || 0) * 60 + (Number(customMinutes) || 0)
-      : Number(selectedDuration) || 0;
-  ```
-- Reset on success: clear `selectedDuration` back to `""`, clear `customHours`/`customMinutes`
+Remove `hours: string` and `minutes: string`. Add:
+- `selectedDuration: string` (default `""`)
+- `customHours: string` (default `""`) — **rename** from former `hours` state
+- `customMinutes: string` (default `""`) — **rename** from former `minutes` state
+
+Duration resolution:
+```ts
+const totalMinutes =
+  selectedDuration === "custom"
+    ? (Number(customHours) || 0) * 60 + (Number(customMinutes) || 0)
+    : Number(selectedDuration) || 0;
+```
+
+Reset on success: `setSelectedDuration("")`, `setCustomHours("")`, `setCustomMinutes("")`.
 
 ### UI Layout
-- The select replaces the h/min inputs in the existing Date + Duration row.
-- When `selectedDuration === "custom"`, render the two number inputs (h + min) immediately below the select, styled the same as before.
-- The `durationPreview` span is removed (no longer needed — the select label itself is self-descriptive).
+- The `<select>` replaces the two `inputSmall` number inputs in the Date + Duration row.
+- When `selectedDuration === "custom"`, render the two number inputs (h + min) immediately below the select. Hours uses `max={23}`, minutes uses `max={59}`. The 1440-minute upper bound validation stays unchanged.
+- Remove the `durationPreview` span and its `isValidDuration` computed variable — the select label is self-descriptive.
+- Update the validation error message from `"Informe a duração (horas e/ou minutos)."` to `"Selecione ou informe a duração."`.
 
 ---
 
 ## 2. Remove KPI Stats Row
 
 ### Problem
-The stats row (Total, Minhas horas, Timer) occupies ~55px of vertical space in a panel that is already width/height constrained. The data it shows is also visible in the Histórico tab, making it redundant.
+The stats row (Total, Minhas horas, Timer) occupies ~55px of vertical space and is redundant with data visible in the Histórico tab.
 
-### Solution
-Remove the `statsRow` block and its three `<Stat>` sub-components from `Dashboard.tsx`. Remove related computed variables `totalHours` and `myHours`. Keep `entryCount` (used for the "Histórico (N)" tab label). Keep `isTimerActive` (used for the timer tab indicator dot).
+### Solution — `Dashboard.tsx`
+Remove:
+1. `const totalHours = minutesToHours(workItemData.totalMinutes);` (line 178)
+2. `const myHours = minutesToHours(workItemData.myMinutes);` (line 179)
+3. The entire `<div style={s.statsRow}>` JSX block (~lines 226–234)
+4. The `Stat` sub-component function (~lines 352–374)
+5. The `minutesToHours` helper function (~lines 396–400)
+6. The `elapsedLabel` helper function (~lines 402–416) — its only consumer was the Timer `<Stat>` which is being removed; it is dead code after this change
+7. Styles: `statsRow`, `statCard`, `statLabel`, `statValue`
 
-### Code to Remove
-- `const totalHours = minutesToHours(workItemData.totalMinutes);`
-- `const myHours = minutesToHours(workItemData.myMinutes);`
-- The entire `<div style={s.statsRow}>` block (lines ~226–234)
-- The `Stat` sub-component function and its styles (`statCard`, `statLabel`, `statValue`, `statsRow`)
-- The `minutesToHours` helper (only used by the removed stats)
+**Retain:**
+- `entryCount` — still used for the "Histórico (N)" tab label
+- `isTimerActive` — still used for the timer tab indicator dot
 
 ---
 
 ## 3. Bug Fix: azureWorkItemId Validation Error (400)
 
 ### Problem
-The API rejects payloads where `azureWorkItemId` is `0` with:
-```
-{"fieldErrors":{"azureWorkItemId":["Too small: expected number to be >0"]}}
-```
-This happens for newly created work items whose ID is `0`. The current code uses `workItemId ?? undefined`, but the nullish coalescing operator `??` does not convert `0` to `undefined` — only `null`/`undefined` trigger the fallback.
+The API rejects payloads where `azureWorkItemId` is `0`. The guard `workItemId ?? undefined` does not convert `0` to `undefined` (`0 ?? undefined === 0`). New unsaved work items return `id = 0` from `getId()`, which passes the `Number.isFinite` check in `WorkItemFormApp.tsx` and sets `workItemId` to `0`.
 
-### Root Cause
-In `WorkItemFormApp.tsx`, `getId()` may return `0` for unsaved work items. The guard `typeof id === "number" && Number.isFinite(id)` passes for `0`, so `workItemId` is set to `0`. Then in `QuickLogForm.tsx`:
-```ts
-azureWorkItemId: workItemId ?? undefined  // 0 ?? undefined === 0 ❌
-```
-
-### Fix — `QuickLogForm.tsx`
+### Fix — Both `QuickLogForm.tsx` and `TimerControl.tsx`
+Find the `azureWorkItemId` line in the payload and change to:
 ```ts
 azureWorkItemId: workItemId != null && workItemId > 0 ? workItemId : undefined,
 ```
 
 ---
 
-## 4. Bug Fix: CompletedWork Set to 0 When Task is Done
+## 4. Bug Fix: CompletedWork/RemainingWork Incorrect Updates
 
-### Problem A — Skipping sync for Done work items
-When a work item is set to "Done", calling `setFieldValues` on scheduling fields can produce unexpected results (fields may be read-only or reset by DevOps). The user expects that registering time on a Done task does **not** modify `CompletedWork` or `RemainingWork` — matching DevOps default behavior.
+### Fix A — Skip sync for terminal-state work items (`api.ts`)
 
-### Fix A — `syncWorkItemFields` in `api.ts`
-Before reading/writing scheduling fields, read `System.State`. If the value is a terminal state (`"Done"`, `"Closed"`, `"Resolved"`, `"Removed"`), return early without modifying any fields:
+At the **top** of `syncWorkItemFields`, add `"System.State"` to the `fieldNames` array. Update the batch read and the fallback path to include it:
+
+**Batch path (`getFieldValues`):** Add `"System.State"` to `fieldNames` so it is fetched in the same call.
+
+**Fallback path (individual `getFieldValue` calls):** Add a corresponding call:
 ```ts
-const state = await formService.getFieldValue("System.State", { returnOriginalValue: false });
+"System.State": await formService.getFieldValue("System.State", { returnOriginalValue: false }),
+```
+
+After reading fields, check the state before any scheduling logic:
+```ts
 const TERMINAL_STATES = new Set(["Done", "Closed", "Resolved", "Removed"]);
+const state = fieldValues["System.State"];
 if (typeof state === "string" && TERMINAL_STATES.has(state)) {
-  return { completedWork: 0, remainingWork: 0, saved: false, skipped: true };
+  return { completedWork: 0, remainingWork: null, saved: false, skipped: true };
 }
 ```
-Return type gains an optional `skipped?: boolean` field.
 
-### Problem B — No OriginalEstimate: only update CompletedWork
-When a work item has no `OriginalEstimate` and no `RemainingWork`, the current `resolveSchedulingHours` computes `remainingWork = 0` and writes it back. This overwrites a field that was intentionally empty.
+Update the `WorkItemFieldUpdate` interface:
+```ts
+export interface WorkItemFieldUpdate {
+  completedWork: number;
+  remainingWork: number | null;  // null = field was not written
+  saved: boolean;
+  skipped?: boolean;             // true when sync was skipped (terminal state)
+}
+```
 
-### Fix B — `scheduling.ts` / `syncWorkItemFields`
-In `resolveSchedulingHours`, add an `hasOriginalEstimate` flag. When `originalEstimate` is null/empty **and** `remainingWork` is null/empty, return `remainingWork: null` to signal "do not update". In `syncWorkItemFields`, only include `RemainingWork` in the `setFieldValues` call when the returned value is non-null.
+In `QuickLogForm.tsx`, update the success message block to handle the `skipped` and `null remainingWork` cases:
+```ts
+if (updated.skipped) {
+  devOpsMsg = " · DevOps: item em estado terminal, campos não modificados";
+} else {
+  const remainingStr = updated.remainingWork !== null
+    ? `, ${updated.remainingWork.toFixed(1)}h restante`
+    : "";
+  devOpsMsg = ` · DevOps: ${updated.completedWork.toFixed(1)}h concluído${remainingStr}`;
+}
+```
+
+### Fix B — No OriginalEstimate: only update CompletedWork (`scheduling.ts`)
+
+Change the return type of `resolveSchedulingHours` to `{ completedWork: number; remainingWork: number | null }`.
+
+When `originalEstimate <= 0` **and** `currentRemaining <= 0`, return `null` for `remainingWork` to signal "do not write this field":
 
 ```ts
-// scheduling.ts
-export function resolveSchedulingHours(values: { ... }) {
-  const hasEstimate = typeof values.originalEstimate === "number" && values.originalEstimate > 0;
-  const hasRemaining = typeof values.remainingWork === "number" && values.remainingWork > 0;
-  // ...
+export function resolveSchedulingHours(values: {
+  completedWork: unknown;
+  remainingWork: unknown;
+  originalEstimate: unknown;
+  nextCompletedWork: number;
+}): { completedWork: number; remainingWork: number | null } {
+  const currentCompleted = toNumericHours(values.completedWork);
+  const currentRemaining = toNumericHours(values.remainingWork);
+  const originalEstimate = toNumericHours(values.originalEstimate);
+  const nextCompletedWork = roundHours(values.nextCompletedWork);
+
+  // When there is no original estimate and no existing remaining work,
+  // only update CompletedWork — do not write RemainingWork at all.
+  if (originalEstimate <= 0 && currentRemaining <= 0) {
+    return { completedWork: nextCompletedWork, remainingWork: null };
+  }
+
+  const baselineHours =
+    originalEstimate > 0
+      ? originalEstimate
+      : Math.max(currentCompleted + currentRemaining, nextCompletedWork);
+
   return {
     completedWork: nextCompletedWork,
-    remainingWork: (hasEstimate || hasRemaining)
-      ? roundHours(Math.max(0, baselineHours - nextCompletedWork))
-      : null,  // null = do not write this field
+    remainingWork: roundHours(Math.max(0, baselineHours - nextCompletedWork)),
   };
 }
 ```
 
-In `syncWorkItemFields`, conditionally include `RemainingWork`:
+In `syncWorkItemFields` (`api.ts`), conditionally include `RemainingWork` only when non-null.
+Add an inline comment explaining why:
 ```ts
 const fieldsToUpdate: Record<string, unknown> = {
   "Microsoft.VSTS.Scheduling.CompletedWork": updatedFields.completedWork,
 };
+// Only write RemainingWork when the scheduling logic determined it should be updated.
+// When remainingWork is null (no original estimate + no existing remaining work),
+// we intentionally leave the field untouched to match DevOps default behaviour.
 if (updatedFields.remainingWork !== null) {
   fieldsToUpdate["Microsoft.VSTS.Scheduling.RemainingWork"] = updatedFields.remainingWork;
+}
+
+if (formService.setFieldValues) {
+  await formService.setFieldValues(fieldsToUpdate);
+} else {
+  await formService.setFieldValue(
+    "Microsoft.VSTS.Scheduling.CompletedWork",
+    updatedFields.completedWork,
+  );
+  if (updatedFields.remainingWork !== null) {
+    await formService.setFieldValue(
+      "Microsoft.VSTS.Scheduling.RemainingWork",
+      updatedFields.remainingWork,
+    );
+  }
 }
 ```
 
@@ -149,14 +214,15 @@ if (updatedFields.remainingWork !== null) {
 
 | File | Change |
 |------|--------|
-| `QuickLogForm.tsx` | Replace h/min inputs with duration select + custom toggle; fix `azureWorkItemId` guard |
-| `Dashboard.tsx` | Remove `statsRow`, `Stat` component, `minutesToHours`, related styles |
-| `api.ts` | `syncWorkItemFields`: skip sync for terminal states; conditionally write `RemainingWork` |
-| `scheduling.ts` | `resolveSchedulingHours`: return `null` for `remainingWork` when no estimate/remaining exists |
+| `QuickLogForm.tsx` | Replace h/min inputs with duration select + custom toggle; rename `hours`→`customHours`, `minutes`→`customMinutes`; fix `azureWorkItemId` guard; update success message for `skipped` and `null remainingWork` |
+| `TimerControl.tsx` | Fix `azureWorkItemId` guard (`workItemId > 0 ? workItemId : undefined`) |
+| `Dashboard.tsx` | Remove `statsRow`, `Stat` component, `minutesToHours`, `elapsedLabel`, `totalHours`/`myHours` declarations, related styles |
+| `api.ts` | `syncWorkItemFields`: add `System.State` to fieldNames + fallback path; skip if terminal; conditionally write `RemainingWork`; update `WorkItemFieldUpdate` type |
+| `scheduling.ts` | `resolveSchedulingHours`: return `null` for `remainingWork` when `originalEstimate <= 0 && currentRemaining <= 0`; update return type |
 
 ---
 
 ## Out of Scope
-- Timer tab duration input (uses different component `TimerControl.tsx`) — not requested
+- Timer tab duration input (`TimerControl.tsx`) — not requested (only the `azureWorkItemId` fix applies there)
 - Backend API changes
 - Adding new DevOps field syncs beyond the existing ones

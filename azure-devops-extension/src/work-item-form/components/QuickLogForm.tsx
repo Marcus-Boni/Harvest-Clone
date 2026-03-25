@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { CreateTimeEntryPayload, IFormServiceSubset } from "../../shared/api";
+import type {
+  CreateTimeEntryPayload,
+  IFormServiceSubset,
+} from "../../shared/api";
 import { syncWorkItemFields } from "../../shared/api";
 import { resolveProjectIdFromDevOpsContext } from "../../shared/project-matching";
 import type { Project } from "../../shared/types";
@@ -35,8 +38,9 @@ export function QuickLogForm({
   );
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(today);
-  const [hours, setHours] = useState("");
-  const [minutes, setMinutes] = useState("");
+  const [selectedDuration, setSelectedDuration] = useState("");
+  const [customHours, setCustomHours] = useState("");
+  const [customMinutes, setCustomMinutes] = useState("");
   const [billable, setBillable] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +67,17 @@ export function QuickLogForm({
     setSuccessMsg(null);
     setDevOpsUpdated(false);
 
-    const h = Number(hours) || 0;
-    const m = Number(minutes) || 0;
-    const totalMinutes = h * 60 + m;
+    const totalMinutes =
+      selectedDuration === "custom"
+        ? (Number(customHours) || 0) * 60 + (Number(customMinutes) || 0)
+        : Number(selectedDuration) || 0;
 
     if (!projectId) {
       setError("Selecione um projeto.");
       return;
     }
     if (totalMinutes < 1) {
-      setError("Informe a duração (horas e/ou minutos).");
+      setError("Selecione ou informe a duração.");
       return;
     }
     if (totalMinutes > 1440) {
@@ -89,7 +94,8 @@ export function QuickLogForm({
         date,
         duration: totalMinutes,
         billable,
-        azureWorkItemId: workItemId ?? undefined,
+        azureWorkItemId:
+          workItemId != null && workItemId > 0 ? workItemId : undefined,
         azureWorkItemTitle: workItemTitle || undefined,
       });
 
@@ -98,7 +104,16 @@ export function QuickLogForm({
       if (formService && workItemId) {
         try {
           const updated = await syncWorkItemFields(formService, totalMinutes);
-          devOpsMsg = ` · DevOps: ${updated.completedWork.toFixed(1)}h concluído, ${updated.remainingWork.toFixed(1)}h restante`;
+          if (updated.skipped) {
+            devOpsMsg =
+              " · DevOps: item em estado terminal, campos não modificados";
+          } else {
+            const remainingStr =
+              updated.remainingWork !== null
+                ? `, ${updated.remainingWork.toFixed(1)}h restante`
+                : "";
+            devOpsMsg = ` · DevOps: ${updated.completedWork.toFixed(1)}h concluído${remainingStr}`;
+          }
           setDevOpsUpdated(true);
         } catch (devOpsErr) {
           console.error("[QuickLogForm] syncWorkItemFields:", devOpsErr);
@@ -109,8 +124,9 @@ export function QuickLogForm({
 
       setSuccessMsg(`✓ Registrado com sucesso!${devOpsMsg}`);
       setDescription("");
-      setHours("");
-      setMinutes("");
+      setSelectedDuration("");
+      setCustomHours("");
+      setCustomMinutes("");
       setTimeout(() => {
         setSuccessMsg(null);
         setDevOpsUpdated(false);
@@ -128,9 +144,6 @@ export function QuickLogForm({
     workItemId && devOpsBaseUrl
       ? `${devOpsBaseUrl}/_workitems/edit/${workItemId}`
       : null;
-
-  const durationValue = `${Number(hours) || 0}h ${Number(minutes) || 0}m`;
-  const isValidDuration = (Number(hours) || 0) * 60 + (Number(minutes) || 0) >= 1;
 
   return (
     <form onSubmit={handleSubmit} style={s.form} noValidate>
@@ -162,8 +175,7 @@ export function QuickLogForm({
       {/* Description (optional) */}
       <div style={s.row}>
         <label style={s.label} htmlFor="qlf-description">
-          Descrição{" "}
-          <span style={s.optional}>(opcional)</span>
+          Descrição <span style={s.optional}>(opcional)</span>
         </label>
         <input
           ref={descRef}
@@ -197,37 +209,63 @@ export function QuickLogForm({
         </div>
 
         <div style={{ ...s.row, flex: 1 }}>
-          <label style={s.label} htmlFor="qlf-hours">
+          <label style={s.label} htmlFor="qlf-duration">
             Duração
           </label>
-          <div style={{ display: "flex", gap: 4 }}>
-            <input
-              id="qlf-hours"
-              style={s.inputSmall}
-              type="number"
-              placeholder="h"
-              min={0}
-              max={23}
-              value={hours}
-              onChange={(e) => setHours(e.target.value)}
-              disabled={loading}
-              aria-label="Horas"
-            />
-            <input
-              id="qlf-minutes"
-              style={s.inputSmall}
-              type="number"
-              placeholder="min"
-              min={0}
-              max={59}
-              value={minutes}
-              onChange={(e) => setMinutes(e.target.value)}
-              disabled={loading}
-              aria-label="Minutos"
-            />
-          </div>
-          {isValidDuration && (
-            <span style={s.durationPreview}>{durationValue}</span>
+          <select
+            id="qlf-duration"
+            style={s.select}
+            value={selectedDuration}
+            onChange={(e) => setSelectedDuration(e.target.value)}
+            disabled={loading}
+            required
+          >
+            <option value="" disabled>
+              Selecione a duração…
+            </option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1h</option>
+            <option value="75">1h 15m</option>
+            <option value="90">1h 30m</option>
+            <option value="105">1h 45m</option>
+            <option value="120">2h</option>
+            <option value="150">2h 30m</option>
+            <option value="180">3h</option>
+            <option value="210">3h 30m</option>
+            <option value="240">4h</option>
+            <option value="300">5h</option>
+            <option value="360">6h</option>
+            <option value="420">7h</option>
+            <option value="480">8h</option>
+            <option value="custom">Personalizado…</option>
+          </select>
+          {selectedDuration === "custom" && (
+            <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+              <input
+                style={s.inputSmall}
+                type="number"
+                placeholder="h"
+                min={0}
+                max={23}
+                value={customHours}
+                onChange={(e) => setCustomHours(e.target.value)}
+                disabled={loading}
+                aria-label="Horas (personalizado)"
+              />
+              <input
+                style={s.inputSmall}
+                type="number"
+                placeholder="min"
+                min={0}
+                max={59}
+                value={customMinutes}
+                onChange={(e) => setCustomMinutes(e.target.value)}
+                disabled={loading}
+                aria-label="Minutos (personalizado)"
+              />
+            </div>
           )}
         </div>
       </div>
@@ -260,9 +298,7 @@ export function QuickLogForm({
             ) : (
               <span>#{workItemId}</span>
             )}
-            {devOpsUpdated && (
-              <span style={s.devOpsTag}>DevOps ✓</span>
-            )}
+            {devOpsUpdated && <span style={s.devOpsTag}>DevOps ✓</span>}
           </div>
         )}
       </div>
@@ -280,7 +316,9 @@ export function QuickLogForm({
 
       <button
         type="submit"
-        style={loading ? { ...s.btn, opacity: 0.6, cursor: "not-allowed" } : s.btn}
+        style={
+          loading ? { ...s.btn, opacity: 0.6, cursor: "not-allowed" } : s.btn
+        }
         disabled={loading || projects.length === 0}
         aria-busy={loading}
       >
@@ -335,12 +373,6 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 13,
     flex: 1,
     minWidth: 0,
-  },
-  durationPreview: {
-    fontSize: 10,
-    color: "var(--brand)",
-    marginTop: 2,
-    fontVariantNumeric: "tabular-nums",
   },
   metaRow: {
     display: "flex",
