@@ -106,7 +106,7 @@ export default function PersonCard({
       toast.error(
         err instanceof Error
           ? err.message
-          : "Erro ao alterar status do usuario.",
+          : "Erro ao alterar status do usuário.",
       );
     } finally {
       setIsUpdating(false);

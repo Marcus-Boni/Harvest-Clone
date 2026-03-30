@@ -302,7 +302,7 @@ export function buildDeterministicSuggestions({
 
     if (linkedProject && (recencyByProject.get(linkedProject.id) ?? 0) > 0) {
       score += 0.05 + recencyBoost;
-      reasons.push("Projeto usado recentemente pelo usuario.");
+      reasons.push("Projeto usado recentemente pelo usuário.");
     }
 
     score = Math.min(1, Math.max(0.78, score));
@@ -409,7 +409,7 @@ export function buildDeterministicSuggestions({
 
     if (linkedProject && (recencyByProject.get(linkedProject.id) ?? 0) > 0) {
       score += 0.1 + recencyBoost;
-      reasons.push("Projeto aparece no historico recente do usuario.");
+      reasons.push("Projeto aparece no histórico recente do usuário.");
     }
 
     score = Math.min(1, Math.max(0, score));

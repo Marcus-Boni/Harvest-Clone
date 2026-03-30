@@ -50,7 +50,7 @@ export function SmartSuggestionsPanel({
     return (
       <section className="rounded-[28px] border border-border/60 bg-card/80 p-5 shadow-sm">
         <p className="text-sm text-muted-foreground">
-          Assistente inteligente desativado para este usuario.
+          Assistente inteligente desativado para este usuário.
         </p>
       </section>
     );
