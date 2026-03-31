@@ -1,11 +1,14 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { getServerAppUrl } from "./app-url";
 import { db } from "./db";
 import { refreshMicrosoftAccessToken } from "./microsoft-oauth";
 
 const microsoftTenantId = process.env.MICROSOFT_TENANT_ID ?? "common";
+const allowedEmailDomain = "@optsolv.com.br";
 
 export const auth = betterAuth({
+  baseURL: getServerAppUrl(),
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
@@ -67,13 +70,25 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          if (!user.email.endsWith("@optsolv.com.br")) {
+          const normalizedEmail = user.email.trim().toLowerCase();
+
+          if (!normalizedEmail.endsWith(allowedEmailDomain)) {
+            console.warn(
+              "[auth] Rejected user creation for non-OptSolv email",
+              {
+                email: user.email,
+              },
+            );
             throw new Error(
-              "Apenas e-mails do domínio @optsolv.com.br são permitidos.",
+              "Apenas e-mails do dominio @optsolv.com.br sao permitidos.",
             );
           }
+
           return {
-            data: user,
+            data: {
+              ...user,
+              email: normalizedEmail,
+            },
           };
         },
       },

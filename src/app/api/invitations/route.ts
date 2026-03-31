@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getActiveSession, getActorContext } from "@/lib/access-control";
+import { getServerAppUrl } from "@/lib/app-url";
 import { db } from "@/lib/db";
 import { invitation, user } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
@@ -89,11 +90,7 @@ export async function POST(req: Request): Promise<Response> {
       return newInvitation;
     });
 
-    const appUrl =
-      process.env.BETTER_AUTH_URL ??
-      process.env.NEXT_PUBLIC_APP_URL ??
-      "http://localhost:3000";
-    const acceptUrl = `${appUrl}/accept-invite?token=${token}`;
+    const acceptUrl = `${getServerAppUrl()}/accept-invite?token=${token}`;
 
     try {
       await sendInvitationEmail({
