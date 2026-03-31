@@ -63,8 +63,9 @@ stages:
       displayName: Build app
 
     - script: |
+        rm -rf "$(deployFolder)"
         mkdir -p "$(deployFolder)/.next"
-        cp -R .next/standalone/* "$(deployFolder)/"
+        cp -RL .next/standalone/. "$(deployFolder)/"
         cp -R .next/static "$(deployFolder)/.next/static"
         cp -R public "$(deployFolder)/public"
       displayName: Prepare standalone package
