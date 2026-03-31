@@ -22,7 +22,7 @@ stages:
   displayName: Build
   jobs:
   - job: BuildAndPackage
-    displayName: Build and package Next.js standalone
+    displayName: Build and package Next.js app
     steps:
     - task: UseNode@1
       displayName: Use Node.js $(nodeVersion)
@@ -64,20 +64,18 @@ stages:
 
     - script: |
         rm -rf "$(deployFolder)"
-        mkdir -p "$(deployFolder)/.next"
-        cp -R .next/standalone/. "$(deployFolder)/"
-        if [ -d "$(deployFolder)/node_modules/.pnpm/node_modules" ]; then
-          cp -RL "$(deployFolder)/node_modules/.pnpm/node_modules/." "$(deployFolder)/node_modules/"
-        fi
-        cp -R .next/static "$(deployFolder)/.next/static"
+        pnpm --filter . deploy --prod "$(deployFolder)"
+        rm -rf "$(deployFolder)/.next" "$(deployFolder)/public"
+        cp -R .next "$(deployFolder)/.next"
         cp -R public "$(deployFolder)/public"
-      displayName: Prepare standalone package
+      displayName: Prepare deploy package
 
     - script: |
         test -f "$(deployFolder)/node_modules/styled-jsx/package.json"
-        NODE_PATH="$(deployFolder)/node_modules" \
-          node -e "require.resolve('styled-jsx/package.json')"
-      displayName: Validate standalone runtime dependencies
+        test -f "$(deployFolder)/node_modules/pg-protocol/dist/index.js"
+        node -e "require.resolve('styled-jsx/package.json', { paths: ['$(deployFolder)'] })"
+        node -e "require.resolve('pg-protocol/dist/index.js', { paths: ['$(deployFolder)'] })"
+      displayName: Validate runtime dependencies
 
     - task: ArchiveFiles@2
       displayName: Archive package
@@ -115,7 +113,7 @@ stages:
               appName: $(webAppName)
               package: $(Pipeline.Workspace)/drop/app.zip
               runtimeStack: $(runtimeStack)
-              startUpCommand: node server.js
+              startUpCommand: node node_modules/next/dist/bin/next start -p $PORT
 
           - script: |
               set -e
