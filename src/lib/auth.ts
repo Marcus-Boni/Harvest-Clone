@@ -9,9 +9,16 @@ const allowedEmailDomain = "@optsolv.com.br";
 
 export const auth = betterAuth({
   baseURL: getServerAppUrl(),
+  trustedOrigins: [getServerAppUrl(), "http://localhost:3000"],
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ["x-forwarded-for", "x-client-ip"],
+    },
+    useSecureCookies: true,
+  },
   emailAndPassword: {
     enabled: true,
   },
@@ -95,6 +102,13 @@ export const auth = betterAuth({
     },
   },
   onAPIError: {
+    onError: (error, ctx) => {
+      console.error("[auth] Better Auth API error", {
+        message: error.message,
+        name: error.name,
+        path: ctx.path,
+      });
+    },
     errorURL: "/login",
   },
   account: {
