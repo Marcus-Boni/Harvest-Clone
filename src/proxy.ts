@@ -42,6 +42,7 @@ export default async function middleware(
   const hasAuthCookie = hasAuthSessionCookie(request);
 
   let session: { user?: { role?: string; isActive?: boolean } } | null = null;
+  let sessionVerified = false;
 
   try {
     const controller = new AbortController();
@@ -93,6 +94,7 @@ export default async function middleware(
       session = hasAuthCookie ? { user: {} } : null;
     } else {
       session = await response.json();
+      sessionVerified = true;
     }
   } catch (error) {
     console.warn("[proxy] Session lookup threw", {
@@ -133,6 +135,10 @@ export default async function middleware(
   }
 
   if (isDashboardPage && isManagerRoute(pathname)) {
+    if (!sessionVerified) {
+      return NextResponse.next();
+    }
+
     const role = session.user?.role as string | undefined;
     if (role !== "manager" && role !== "admin") {
       return NextResponse.redirect(
