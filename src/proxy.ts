@@ -25,10 +25,21 @@ function buildLoginRedirect(
   return NextResponse.redirect(url);
 }
 
+function hasAuthSessionCookie(request: NextRequest): boolean {
+  return request.cookies.getAll().some(({ name }) => {
+    const normalizedName = name.toLowerCase();
+    return (
+      normalizedName.includes("better-auth") ||
+      normalizedName.includes("session_token")
+    );
+  });
+}
+
 export default async function middleware(
   request: NextRequest,
 ): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
+  const hasAuthCookie = hasAuthSessionCookie(request);
 
   let session: { user?: { role?: string; isActive?: boolean } } | null = null;
 
@@ -79,7 +90,7 @@ export default async function middleware(
         forwardedHost: forwardedHostHeader,
         forwardedProto: forwardedProtoHeader,
       });
-      session = null;
+      session = hasAuthCookie ? { user: {} } : null;
     } else {
       session = await response.json();
     }
@@ -87,8 +98,9 @@ export default async function middleware(
     console.warn("[proxy] Session lookup threw", {
       pathname,
       message: error instanceof Error ? error.message : String(error),
+      hasAuthCookie,
     });
-    session = null;
+    session = hasAuthCookie ? { user: {} } : null;
   }
 
   const isAuthPage = isPublicAuthRoute(pathname);
@@ -99,6 +111,7 @@ export default async function middleware(
     if (isDashboardPage) {
       console.warn("[proxy] Redirecting to login: missing session", {
         pathname,
+        hasAuthCookie,
       });
       return buildLoginRedirect(request, "missing-session");
     }
