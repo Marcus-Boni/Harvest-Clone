@@ -12,6 +12,9 @@ variables:
   runtimeStack: NODE|24-lts
   azureServiceConnection: opt-time
   webAppName: dev-opt-time
+  # Fallback used only when DATABASE_URL is not configured in pipeline variables.
+  # Production runtime must still use the real DATABASE_URL in App Service settings.
+  buildDatabaseUrlFallback: postgresql://build:build@127.0.0.1:5432/build?sslmode=require
   packagePath: $(Build.ArtifactStagingDirectory)/app.zip
   deployFolder: $(Build.ArtifactStagingDirectory)/deploy
 
@@ -45,7 +48,11 @@ stages:
     - script: pnpm install --frozen-lockfile
       displayName: Install dependencies
 
-    - script: pnpm run build
+    - script: |
+      set -e
+      export DATABASE_URL="${DATABASE_URL:-$(buildDatabaseUrlFallback)}"
+      echo "DATABASE_URL configured for build step."
+      pnpm run build
       displayName: Build app
 
     - script: |
