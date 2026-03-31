@@ -49,10 +49,10 @@ stages:
       displayName: Install dependencies
 
     - script: |
-      set -e
-      export DATABASE_URL="${DATABASE_URL:-$(buildDatabaseUrlFallback)}"
-      echo "DATABASE_URL configured for build step."
-      pnpm run build
+        set -e
+        export DATABASE_URL="${DATABASE_URL:-$(buildDatabaseUrlFallback)}"
+        echo "DATABASE_URL configured for build step."
+        pnpm run build
       displayName: Build app
 
     - script: |
