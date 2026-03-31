@@ -102,11 +102,14 @@ export const auth = betterAuth({
     },
   },
   onAPIError: {
-    onError: (error, ctx) => {
+    onError: (error) => {
+      const normalizedError =
+        error instanceof Error
+          ? { message: error.message, name: error.name }
+          : { message: String(error), name: "UnknownError" };
+
       console.error("[auth] Better Auth API error", {
-        message: error.message,
-        name: error.name,
-        path: ctx.path,
+        ...normalizedError,
       });
     },
     errorURL: "/login",
