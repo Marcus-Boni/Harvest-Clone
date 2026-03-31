@@ -109,6 +109,19 @@ stages:
           - download: current
             artifact: drop
 
+          - task: AzureCLI@2
+            displayName: Set startup command before deploy
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -e
+                az webapp config set \
+                  --resource-group "$(resourceGroupName)" \
+                  --name "$(webAppName)" \
+                  --startup-file 'node node_modules/next/dist/bin/next start -p $PORT'
+
           - task: AzureWebApp@1
             displayName: Deploy package to web app
             inputs:
@@ -120,7 +133,7 @@ stages:
               startUpCommand: node node_modules/next/dist/bin/next start -p $PORT
 
           - task: AzureCLI@2
-            displayName: Enforce startup command
+            displayName: Re-apply startup command after deploy
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: bash
