@@ -101,7 +101,7 @@ export async function POST(req: Request): Promise<Response> {
         hasPat: true,
         warning: commitAuthorPersistenceAvailable
           ? null
-          : "Configuracao salva sem persistir o autor dos commits. Aplique a migration do banco para armazenar esse campo corretamente.",
+          : "Configuração salva sem persistir o autor dos commits. Aplique a migration do banco para armazenar esse campo corretamente.",
       },
       { status: existingConfig ? 200 : 201 },
     );
@@ -110,7 +110,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json(
       {
         error:
-          "Nao foi possivel salvar a configuracao do Azure DevOps. Se voce acabou de atualizar o sistema, aplique a migration do banco e tente novamente.",
+          "Não foi possível salvar a configuração do Azure DevOps. Se você acabou de atualizar o sistema, aplique a migration do banco e tente novamente.",
       },
       { status: 500 },
     );

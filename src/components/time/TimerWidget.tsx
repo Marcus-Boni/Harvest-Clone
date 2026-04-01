@@ -339,7 +339,7 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
                     type="text"
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder="No que voce esta trabalhando?"
+                    placeholder="No que você está trabalhando?"
                     onKeyDown={(event) =>
                       event.key === "Enter" && void handleStart()
                     }

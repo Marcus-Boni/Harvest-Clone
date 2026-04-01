@@ -242,7 +242,7 @@ export default function PersonCard({
                     variant="outline"
                     className="text-[10px] bg-brand-500/10 text-brand-500 border-brand-500/20"
                   >
-                    Voce
+                    Você
                   </Badge>
                 )}
                 {!person.isActive && (
