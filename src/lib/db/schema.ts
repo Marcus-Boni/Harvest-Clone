@@ -505,3 +505,39 @@ export const suggestionRelations = relations(suggestion, ({ one }) => ({
     relationName: "reviewer",
   }),
 }));
+
+// ─── App Release (Changelog) ──────────────────────────────────────────
+export type AppReleaseStatus = "draft" | "published";
+
+export const appRelease = pgTable(
+  "app_release",
+  {
+    id: text("id").primaryKey(),
+    versionTag: text("version_tag").notNull(),
+    title: text("title").notNull(),
+    /** Markdown-enabled release notes */
+    description: text("description").notNull(),
+    /** draft | published */
+    status: text("status").notNull().default("draft"),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("app_release_status_idx").on(table.status),
+    index("app_release_published_at_idx").on(table.publishedAt),
+  ],
+);
+
+export const appReleaseRelations = relations(appRelease, ({ one }) => ({
+  author: one(user, {
+    fields: [appRelease.authorId],
+    references: [user.id],
+  }),
+}));

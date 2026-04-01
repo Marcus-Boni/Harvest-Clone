@@ -5,6 +5,7 @@ import {
   Menu,
   Moon,
   Plus,
+  Rss,
   Search,
   Settings,
   Sun,
@@ -147,6 +148,19 @@ export function Header() {
           onClick={openCommandPalette}
         >
           <Search className="h-4.5 w-4.5" />
+        </Button>
+
+        {/* Changelog / Novidades */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden md:flex"
+          aria-label="Ver changelog de versões"
+          asChild
+        >
+          <Link href="/dashboard/releases">
+            <Rss className="h-4.5 w-4.5" />
+          </Link>
         </Button>
 
         {/* Theme toggle */}

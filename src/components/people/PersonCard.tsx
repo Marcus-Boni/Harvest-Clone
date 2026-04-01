@@ -144,7 +144,7 @@ export default function PersonCard({
   function getPendingActionCopy(action: PendingAction) {
     if (!action) {
       return {
-        title: "Confirmar alteracao",
+        title: "Confirmar alteração",
         description: "Confirme para continuar.",
         confirmLabel: "Confirmar",
       };
@@ -153,29 +153,29 @@ export default function PersonCard({
     if (action.type === "role") {
       const roleLabel = roleLabels[action.role] ?? action.role;
       return {
-        title: "Confirmar mudanca de cargo",
+        title: "Confirmar mudança de cargo",
         description: (
           <>
-            Voce esta prestes a alterar o cargo de{" "}
+            Você está prestes a alterar o cargo de{" "}
             <strong className="text-foreground">
               {person.name || person.email}
             </strong>{" "}
             para <strong className="text-foreground">{roleLabel}</strong>.
           </>
         ),
-        confirmLabel: "Confirmar mudanca",
+        confirmLabel: "Confirmar mudança",
       };
     }
 
     return {
       title: action.nextIsActive
-        ? "Confirmar reativacao de acesso"
-        : "Confirmar desativacao de acesso",
+        ? "Confirmar reativação de acesso"
+        : "Confirmar desativação de acesso",
       description: (
         <>
           {action.nextIsActive
-            ? "Voce esta prestes a reativar o acesso de "
-            : "Voce esta prestes a desativar o acesso de "}
+            ? "Você está prestes a reativar o acesso de "
+            : "Você está prestes a desativar o acesso de "}
           <strong className="text-foreground">
             {person.name || person.email}
           </strong>
