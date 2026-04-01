@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -45,7 +44,14 @@ export interface TimeEntryFormInitialValues
       | "duration"
       | "projectId"
     >
-  > {}
+  > {
+  descriptionVariants?: {
+    concise: string;
+    packaged: string;
+    defaultVariant?: "concise" | "packaged";
+    sourceLabel?: string;
+  };
+}
 
 interface TimeEntryFormProps {
   open: boolean;
@@ -61,6 +67,7 @@ interface TimeEntryFormProps {
   }) => Promise<void>;
   initialValues?: TimeEntryFormInitialValues;
   mode?: "create" | "edit";
+  allowContinue?: boolean;
 }
 
 function getDefaultValues(
@@ -83,6 +90,7 @@ export function TimeEntryForm({
   onSubmit,
   initialValues,
   mode = "create",
+  allowContinue = true,
 }: TimeEntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [workItem, setWorkItem] = useState<{
@@ -91,6 +99,9 @@ export function TimeEntryForm({
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [outlookOpen, setOutlookOpen] = useState(false);
+  const [activeDescriptionVariant, setActiveDescriptionVariant] = useState<
+    "concise" | "packaged" | null
+  >(initialValues?.descriptionVariants?.defaultVariant ?? null);
   const submitModeRef = useRef<"close" | "continue">(
     getTimePreferences().submitMode,
   );
@@ -124,8 +135,11 @@ export function TimeEntryForm({
     }
 
     const preferences = getTimePreferences();
-    submitModeRef.current = preferences.submitMode;
+    submitModeRef.current = allowContinue ? preferences.submitMode : "close";
     form.reset(getDefaultValues(initialValues));
+    setActiveDescriptionVariant(
+      initialValues?.descriptionVariants?.defaultVariant ?? null,
+    );
 
     if (preferences.outlookDrawerDefaultOpen) {
       setOutlookOpen(true);
@@ -139,7 +153,7 @@ export function TimeEntryForm({
     } else {
       setWorkItem(null);
     }
-  }, [form, initialValues, open]);
+  }, [allowContinue, form, initialValues, open]);
 
   const selectedDate = form.watch("date");
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
@@ -148,6 +162,8 @@ export function TimeEntryForm({
     (event: OutlookEvent) => {
       const parseUtc = (iso: string) =>
         new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
+
+      setActiveDescriptionVariant(null);
       form.setValue("description", event.subject || "", {
         shouldDirty: true,
         shouldValidate: true,
@@ -167,7 +183,6 @@ export function TimeEntryForm({
         ),
         { shouldDirty: true, shouldValidate: true },
       );
-      // Fecha o sheet mobile após selecionar a reunião
       setOutlookOpen(false);
     },
     [form],
@@ -194,7 +209,11 @@ export function TimeEntryForm({
         saveTimePreference("submitMode", submitModeRef.current);
       }
 
-      if (mode === "create" && submitModeRef.current === "continue") {
+      if (
+        mode === "create" &&
+        allowContinue &&
+        submitModeRef.current === "continue"
+      ) {
         form.reset({
           projectId: values.projectId,
           description: "",
@@ -202,6 +221,7 @@ export function TimeEntryForm({
           duration: values.duration,
           billable: values.billable,
         });
+        setActiveDescriptionVariant(null);
         setWorkItem(null);
         return;
       }
@@ -225,9 +245,7 @@ export function TimeEntryForm({
     <TimeEntryDialogShell
       open={open}
       onOpenChange={onOpenChange}
-      title={
-        mode === "create" ? "Registrar horas trabalhadas" : "Editar horas"
-      }
+      title={mode === "create" ? "Registrar horas trabalhadas" : "Editar horas"}
       description={
         mode === "create"
           ? "Preencha os dados abaixo para registrar seu tempo."
@@ -247,6 +265,18 @@ export function TimeEntryForm({
             workItem={workItem}
             onWorkItemChange={setWorkItem}
             onOpenAgenda={() => setOutlookOpen(true)}
+            descriptionVariants={initialValues?.descriptionVariants}
+            activeDescriptionVariant={activeDescriptionVariant}
+            onDescriptionVariantChange={(variant) => {
+              const variants = initialValues?.descriptionVariants;
+              if (!variants) return;
+
+              setActiveDescriptionVariant(variant);
+              form.setValue("description", variants[variant], {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+            }}
           />
         </div>
 
@@ -261,14 +291,16 @@ export function TimeEntryForm({
               Cancelar
             </Button>
 
-            {mode === "create" ? (
+            {mode === "create" && allowContinue ? (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="submit"
                   disabled={submitting}
                   variant="outline"
                   className="rounded-full"
-                  onClick={() => { submitModeRef.current = "continue"; }}
+                  onClick={() => {
+                    submitModeRef.current = "continue";
+                  }}
                 >
                   {submitting && submitModeRef.current === "continue"
                     ? "Salvando..."
@@ -278,7 +310,9 @@ export function TimeEntryForm({
                   type="submit"
                   disabled={submitting}
                   className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
-                  onClick={() => { submitModeRef.current = "close"; }}
+                  onClick={() => {
+                    submitModeRef.current = "close";
+                  }}
                 >
                   {submitting && submitModeRef.current === "close"
                     ? "Salvando..."
@@ -290,8 +324,15 @@ export function TimeEntryForm({
                 type="submit"
                 disabled={submitting}
                 className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
+                onClick={() => {
+                  submitModeRef.current = "close";
+                }}
               >
-                {submitting ? "Salvando..." : "Salvar alterações"}
+                {submitting
+                  ? "Salvando..."
+                  : mode === "create"
+                    ? "Criar lançamento"
+                    : "Salvar alterações"}
               </Button>
             )}
           </div>

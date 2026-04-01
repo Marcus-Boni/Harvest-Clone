@@ -32,7 +32,10 @@ import {
   useOutlookEvents,
 } from "@/hooks/use-outlook-events";
 import type { TimeEntry } from "@/hooks/use-time-entries";
-import type { TimeSuggestion } from "@/hooks/use-time-suggestions";
+import type {
+  TimeSuggestion,
+  TimeSuggestionCommit,
+} from "@/hooks/use-time-suggestions";
 import { cn, formatDuration } from "@/lib/utils";
 
 interface DayViewProps {
@@ -51,6 +54,11 @@ interface DayViewProps {
   onAssistantEnabledChange: (enabled: boolean) => void;
   onRetrySuggestions: () => void;
   onApplySuggestion: (suggestion: TimeSuggestion) => void;
+  onApplySuggestionCommit: (
+    suggestion: TimeSuggestion,
+    commit: TimeSuggestionCommit,
+  ) => void;
+  appliedSuggestionCommitKeys: string[];
   onEditSuggestion: (suggestion: TimeSuggestion) => void;
   onIgnoreSuggestion: (suggestion: TimeSuggestion) => void;
 }
@@ -77,6 +85,8 @@ export function DayView({
   onAssistantEnabledChange,
   onRetrySuggestions,
   onApplySuggestion,
+  onApplySuggestionCommit,
+  appliedSuggestionCommitKeys,
   onEditSuggestion,
   onIgnoreSuggestion,
 }: DayViewProps) {
@@ -321,6 +331,8 @@ export function DayView({
         error={suggestionsError}
         onRetry={onRetrySuggestions}
         onApply={onApplySuggestion}
+        onApplyCommit={onApplySuggestionCommit}
+        appliedCommitKeys={appliedSuggestionCommitKeys}
         onEditAndApply={onEditSuggestion}
         onIgnore={onIgnoreSuggestion}
       />

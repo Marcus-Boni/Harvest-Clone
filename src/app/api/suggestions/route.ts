@@ -6,8 +6,6 @@ import { createSuggestionSchema } from "@/lib/validations/suggestion.schema";
 
 /**
  * GET /api/suggestions
- * - admin → all suggestions with author info
- * - member/manager → only their own suggestions
  */
 export async function GET(req: Request): Promise<Response> {
   const session = await getActiveSession(req.headers);

@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { getActiveSession, getActorContext } from "@/lib/access-control";
 import { findAzureDevopsConfigByUserId } from "@/lib/azure-devops/config";
 import { db } from "@/lib/db";
@@ -21,9 +20,6 @@ export async function GET(req: Request): Promise<Response> {
   }
 
   const actor = getActorContext(session.user);
-  if (actor.role !== "admin" && actor.role !== "manager") {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   try {
     const config = await findAzureDevopsConfigByUserId(actor.userId);
@@ -90,9 +86,6 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const actor = getActorContext(session.user);
-  if (actor.role !== "admin" && actor.role !== "manager") {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const body = await req.json();
   const projectsToImport = body.projects as Array<{
@@ -117,7 +110,9 @@ export async function POST(req: Request): Promise<Response> {
       existingProjects.map((item) => item.azureProjectId).filter(Boolean),
     );
 
-    const toInsert = projectsToImport.filter((item) => !importedIds.has(item.id));
+    const toInsert = projectsToImport.filter(
+      (item) => !importedIds.has(item.id),
+    );
     if (toInsert.length === 0) {
       return Response.json(
         { message: "Todos os projetos selecionados ja foram importados." },

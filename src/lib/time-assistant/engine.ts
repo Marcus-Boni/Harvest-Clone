@@ -1,6 +1,9 @@
 import { addMinutes, differenceInMinutes, max, min } from "date-fns";
-
-export type SuggestionConfidence = "high" | "medium" | "low";
+import type {
+  SuggestionConfidence,
+  TimeSuggestion,
+  TimeSuggestionActivitySummary,
+} from "@/types/time-suggestions";
 
 export interface NormalizedCommitActivity {
   id: string;
@@ -32,34 +35,7 @@ export interface RecentEntryActivity {
   description: string;
 }
 
-export interface CandidateSuggestion {
-  fingerprint: string;
-  projectId: string | null;
-  projectName: string | null;
-  description: string;
-  date: string;
-  duration: number;
-  billable: boolean;
-  azureWorkItemId: number | null;
-  azureWorkItemTitle: string | null;
-  score: number;
-  confidence: SuggestionConfidence;
-  reasons: string[];
-  sourceBreakdown: {
-    commits: number;
-    meetings: number;
-    recency: number;
-  };
-  payload: {
-    projectId: string;
-    description: string;
-    date: string;
-    duration: number;
-    billable: boolean;
-    azureWorkItemId?: number;
-    azureWorkItemTitle?: string;
-  } | null;
-}
+export type CandidateSuggestion = TimeSuggestion;
 
 interface InternalProject {
   id: string;
@@ -243,6 +219,38 @@ function getTopRecentDuration(entries: RecentEntryActivity[]): number {
   return roundToStandardDuration(getMedian(durations));
 }
 
+function buildActivitySummary(
+  commits: NormalizedCommitActivity[],
+): TimeSuggestionActivitySummary | null {
+  if (commits.length === 0) {
+    return null;
+  }
+
+  const orderedCommits = [...commits].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+  const repositories = Array.from(
+    new Set(orderedCommits.map((commit) => commit.repositoryName)),
+  );
+
+  return {
+    totalCommits: orderedCommits.length,
+    repositoryCount: repositories.length,
+    repositories,
+    startedAt: orderedCommits[orderedCommits.length - 1]?.timestamp ?? null,
+    endedAt: orderedCommits[0]?.timestamp ?? null,
+    commits: orderedCommits.map((commit) => ({
+      id: commit.id,
+      commitId: commit.commitId,
+      repositoryName: commit.repositoryName,
+      message: commit.message,
+      branch: commit.branch,
+      timestamp: commit.timestamp,
+      workItemIds: commit.workItemIds,
+    })),
+  };
+}
+
 export function buildDeterministicSuggestions({
   date,
   commits,
@@ -350,6 +358,7 @@ export function buildDeterministicSuggestions({
           ? (recencyByProject.get(linkedProject.id) ?? 0)
           : 0,
       },
+      activitySummary: buildActivitySummary(overlappingCommits),
       payload: linkedProject
         ? {
             projectId: linkedProject.id,
@@ -474,6 +483,7 @@ export function buildDeterministicSuggestions({
           ? (recencyByProject.get(linkedProject.id) ?? 0)
           : 0,
       },
+      activitySummary: buildActivitySummary(group),
       payload: linkedProject
         ? {
             projectId: linkedProject.id,

@@ -14,7 +14,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DayView } from "@/components/time/DayView";
 import { MonthView } from "@/components/time/MonthView";
-import { TimeEntryForm } from "@/components/time/TimeEntryForm";
+import {
+  TimeEntryForm,
+  type TimeEntryFormInitialValues,
+} from "@/components/time/TimeEntryForm";
 import { TimerWidget } from "@/components/time/TimerWidget";
 import { type TimeView, TimeViewTabs } from "@/components/time/TimeViewTabs";
 import { WeekView } from "@/components/time/WeekView";
@@ -26,6 +29,7 @@ import {
 import { type TimeEntry, useTimeEntries } from "@/hooks/use-time-entries";
 import {
   type TimeSuggestion,
+  type TimeSuggestionCommit,
   useTimeSuggestions,
 } from "@/hooks/use-time-suggestions";
 import { useTimesheets } from "@/hooks/use-timesheets";
@@ -60,6 +64,127 @@ interface Project {
   azureProjectId?: string | null;
 }
 
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function buildRepositoryLabel(repositories: string[]) {
+  if (repositories.length === 0) {
+    return "";
+  }
+
+  const preview = repositories.slice(0, 2).join(", ");
+  return repositories.length > 2
+    ? `${preview} +${repositories.length - 2}`
+    : preview;
+}
+
+function roundToQuarterHour(minutes: number) {
+  return Math.max(15, Math.round(minutes / 15) * 15);
+}
+
+function buildSuggestionCommitKey(
+  suggestionFingerprint: string,
+  commitId: string,
+) {
+  return `${suggestionFingerprint}:${commitId}`;
+}
+
+function buildSuggestionDescriptionVariants(
+  suggestion: TimeSuggestion,
+): NonNullable<TimeEntryFormInitialValues["descriptionVariants"]> | undefined {
+  const concise = suggestion.description.trim();
+  if (!concise) {
+    return undefined;
+  }
+
+  const activitySummary = suggestion.activitySummary;
+  if (!activitySummary || activitySummary.totalCommits === 0) {
+    return {
+      concise,
+      packaged: concise,
+      defaultVariant: "concise",
+      sourceLabel: "Sugestão inteligente",
+    };
+  }
+
+  const repositoryLabel = buildRepositoryLabel(activitySummary.repositories);
+  const contextParts = [
+    `${activitySummary.totalCommits} commits`,
+    activitySummary.repositoryCount > 0
+      ? `em ${activitySummary.repositoryCount} repositórios`
+      : null,
+    repositoryLabel ? `(${repositoryLabel})` : null,
+  ].filter(Boolean);
+
+  const uniqueHighlights = Array.from(
+    new Set(
+      activitySummary.commits
+        .map((commit) => commit.message.trim())
+        .filter(Boolean)
+        .filter((message) => message !== concise),
+    ),
+  );
+
+  const highlightPreview = uniqueHighlights.slice(0, 2).join("; ");
+  const extraHighlights =
+    uniqueHighlights.length > 2 ? ` +${uniqueHighlights.length - 2}` : "";
+
+  const packagedLines = [
+    concise,
+    `Contexto: ${contextParts.join(" ")}.`,
+    highlightPreview
+      ? `Destaques: ${highlightPreview}${extraHighlights}.`
+      : null,
+  ].filter(Boolean);
+
+  let packaged = packagedLines.join("\n");
+  if (packaged.length > 320) {
+    packaged = truncateText(packaged, 320);
+  }
+
+  return {
+    concise,
+    packaged,
+    defaultVariant: "packaged",
+    sourceLabel: "Sugestão inteligente",
+  };
+}
+
+function buildCommitDescriptionVariants(
+  suggestion: TimeSuggestion,
+  commit: TimeSuggestionCommit,
+): NonNullable<TimeEntryFormInitialValues["descriptionVariants"]> | undefined {
+  const concise =
+    commit.message.trim() || `Commit ${commit.commitId.slice(0, 7)}`;
+  const details = [
+    `Commit ${commit.commitId.slice(0, 7)} em ${commit.repositoryName}.`,
+    commit.branch ? `Branch: ${commit.branch}.` : null,
+    commit.workItemIds.length > 0
+      ? `Work items: ${commit.workItemIds.map((id) => `#${id}`).join(", ")}.`
+      : null,
+  ].filter(Boolean);
+
+  const packaged = truncateText([concise, ...details].join("\n"), 280);
+
+  return {
+    concise,
+    packaged,
+    defaultVariant: packaged !== concise ? "packaged" : "concise",
+    sourceLabel: `Commit individual de ${suggestion.projectName ?? "projeto"}`,
+  };
+}
+
+function estimateCommitDuration(suggestion: TimeSuggestion) {
+  const totalCommits = suggestion.activitySummary?.totalCommits ?? 1;
+  const distributedMinutes = suggestion.duration / Math.max(1, totalCommits);
+  return roundToQuarterHour(Math.min(120, Math.max(15, distributedMinutes)));
+}
+
 function getWeekPeriod(date: Date) {
   const weekStart = startOfISOWeek(date);
   return `${getISOWeekYear(weekStart)}-W${getISOWeek(weekStart).toString().padStart(2, "0")}`;
@@ -77,7 +202,19 @@ export default function TimePage() {
   const [activeView, setActiveView] = useState<TimeView>("week");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [projects, setProjects] = useState<Project[]>([]);
+  const [createTarget, setCreateTarget] = useState<
+    TimeEntryFormInitialValues | undefined
+  >();
   const [editTarget, setEditTarget] = useState<TimeEntry | undefined>();
+  const [pendingSuggestionSubmission, setPendingSuggestionSubmission] =
+    useState<{
+      action: "accepted" | "edited";
+      commitKey?: string;
+      hideSuggestionOnSuccess: boolean;
+      suggestion: TimeSuggestion;
+    } | null>(null);
+  const [appliedSuggestionCommitKeys, setAppliedSuggestionCommitKeys] =
+    useState<string[]>([]);
   const [ignoredSuggestionFingerprints, setIgnoredSuggestionFingerprints] =
     useState<string[]>([]);
   const [assistantEnabled, setAssistantEnabled] = useState(() => {
@@ -253,6 +390,53 @@ export default function TimePage() {
     [openQuickEntry, selectedDate],
   );
 
+  const openSuggestionCreate = useCallback(
+    (
+      suggestion: TimeSuggestion,
+      action: "accepted" | "edited",
+      overrides?: Partial<TimeEntryFormInitialValues>,
+      options?: {
+        commitKey?: string;
+        hideSuggestionOnSuccess?: boolean;
+      },
+    ) => {
+      const source = suggestion.payload ?? {
+        billable: suggestion.billable,
+        date: suggestion.date,
+        description: suggestion.description,
+        duration: suggestion.duration,
+        projectId: undefined,
+        azureWorkItemId: suggestion.azureWorkItemId ?? undefined,
+        azureWorkItemTitle: suggestion.azureWorkItemTitle ?? undefined,
+      };
+      const descriptionVariants =
+        buildSuggestionDescriptionVariants(suggestion);
+      const initialDescription =
+        descriptionVariants?.defaultVariant === "packaged"
+          ? descriptionVariants.packaged
+          : (descriptionVariants?.concise ?? source.description);
+
+      setCreateTarget({
+        billable: source.billable,
+        date: source.date,
+        description: initialDescription,
+        duration: source.duration,
+        projectId: source.projectId,
+        azureWorkItemId: source.azureWorkItemId,
+        azureWorkItemTitle: source.azureWorkItemTitle,
+        descriptionVariants,
+        ...overrides,
+      });
+      setPendingSuggestionSubmission({
+        action,
+        commitKey: options?.commitKey,
+        hideSuggestionOnSuccess: options?.hideSuggestionOnSuccess ?? true,
+        suggestion,
+      });
+    },
+    [],
+  );
+
   const handleUpdate = useCallback(
     async (data: {
       projectId: string;
@@ -273,11 +457,116 @@ export default function TimePage() {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel atualizar o registro.",
+            : "Não foi possível atualizar o registro.",
         );
       }
     },
     [editTarget, updateEntry],
+  );
+
+  const handleCreateFromSuggestionSubmit = useCallback(
+    async (data: {
+      projectId: string;
+      description: string;
+      date: string;
+      duration: number;
+      billable: boolean;
+      azureWorkItemId?: number;
+      azureWorkItemTitle?: string;
+    }) => {
+      try {
+        await createEntry(data);
+
+        if (pendingSuggestionSubmission) {
+          await sendFeedback(
+            pendingSuggestionSubmission.suggestion,
+            pendingSuggestionSubmission.action,
+          );
+
+          if (pendingSuggestionSubmission.hideSuggestionOnSuccess) {
+            setIgnoredSuggestionFingerprints((current) => {
+              if (
+                current.includes(
+                  pendingSuggestionSubmission.suggestion.fingerprint,
+                )
+              ) {
+                return current;
+              }
+
+              return [
+                ...current,
+                pendingSuggestionSubmission.suggestion.fingerprint,
+              ];
+            });
+          }
+
+          if (pendingSuggestionSubmission.commitKey) {
+            setAppliedSuggestionCommitKeys((current) => {
+              const commitKey = pendingSuggestionSubmission.commitKey;
+              if (!commitKey || current.includes(commitKey)) {
+                return current;
+              }
+
+              return [...current, commitKey];
+            });
+          }
+        }
+
+        setCreateTarget(undefined);
+        setPendingSuggestionSubmission(null);
+        toast.success("Registro criado com sucesso.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível criar o registro.",
+        );
+        throw error;
+      }
+    },
+    [createEntry, pendingSuggestionSubmission, sendFeedback],
+  );
+
+  const handleApplySuggestionCommit = useCallback(
+    (suggestion: TimeSuggestion, commit: TimeSuggestionCommit) => {
+      const commitKey = buildSuggestionCommitKey(
+        suggestion.fingerprint,
+        commit.id,
+      );
+      const descriptionVariants = buildCommitDescriptionVariants(
+        suggestion,
+        commit,
+      );
+      const initialDescription =
+        descriptionVariants?.defaultVariant === "packaged"
+          ? descriptionVariants.packaged
+          : (descriptionVariants?.concise ??
+            (commit.message.trim() || `Commit ${commit.commitId.slice(0, 7)}`));
+
+      openSuggestionCreate(
+        suggestion,
+        "edited",
+        {
+          azureWorkItemId: commit.workItemIds[0] ?? undefined,
+          azureWorkItemTitle:
+            commit.workItemIds[0] !== undefined
+              ? `Work Item #${commit.workItemIds[0]}`
+              : (suggestion.azureWorkItemTitle ?? undefined),
+          description: initialDescription,
+          descriptionVariants,
+          duration: estimateCommitDuration(suggestion),
+        },
+        {
+          commitKey,
+          hideSuggestionOnSuccess: false,
+        },
+      );
+
+      toast.message(
+        "Revise este commit individual antes de salvar o lançamento.",
+      );
+    },
+    [openSuggestionCreate],
   );
 
   const handleEdit = useCallback((entry: TimeEntry) => {
@@ -293,7 +582,7 @@ export default function TimePage() {
         toast.error(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel excluir o registro.",
+            : "Não foi possível excluir o registro.",
         );
       }
     },
@@ -341,6 +630,7 @@ export default function TimePage() {
       return;
     }
 
+    setAppliedSuggestionCommitKeys([]);
     setIgnoredSuggestionFingerprints([]);
   }, [selectedDateStr]);
 
@@ -360,6 +650,18 @@ export default function TimePage() {
 
   const handleApplySuggestion = useCallback(
     async (suggestion: TimeSuggestion) => {
+      const shouldOpenSuggestionForm = typeof window !== "undefined";
+
+      if (shouldOpenSuggestionForm) {
+        openSuggestionCreate(suggestion, "accepted");
+        toast.message(
+          suggestion.payload
+            ? "Revise a descrição sugerida e confirme o lançamento."
+            : "Selecione um projeto, revise a descrição sugerida e confirme o lançamento.",
+        );
+        return;
+      }
+
       if (!suggestion.payload) {
         openCreate({
           billable: suggestion.billable,
@@ -374,7 +676,9 @@ export default function TimePage() {
       }
 
       try {
-        await createEntry(suggestion.payload);
+        await createEntry(
+          suggestion.payload as NonNullable<typeof suggestion.payload>,
+        );
         await sendFeedback(suggestion, "accepted");
         hideSuggestion(suggestion.fingerprint);
         toast.success("Sugestão aplicada com sucesso!");
@@ -382,11 +686,24 @@ export default function TimePage() {
         toast.error("Não foi possível aplicar a sugestão.");
       }
     },
-    [createEntry, hideSuggestion, openCreate, sendFeedback],
+    [
+      createEntry,
+      hideSuggestion,
+      openCreate,
+      openSuggestionCreate,
+      sendFeedback,
+    ],
   );
 
   const handleEditSuggestion = useCallback(
     (suggestion: TimeSuggestion) => {
+      const shouldOpenSuggestionForm = typeof window !== "undefined";
+
+      if (shouldOpenSuggestionForm) {
+        openSuggestionCreate(suggestion, "edited");
+        return;
+      }
+
       const source = suggestion.payload ?? {
         billable: suggestion.billable,
         date: suggestion.date,
@@ -407,7 +724,7 @@ export default function TimePage() {
         azureWorkItemTitle: source.azureWorkItemTitle,
       });
     },
-    [openCreate],
+    [openCreate, openSuggestionCreate],
   );
 
   const handleIgnoreSuggestion = useCallback(
@@ -429,7 +746,7 @@ export default function TimePage() {
     async (entryId: string, newDate: string) => {
       const entry = entries.find((candidate) => candidate.id === entryId);
       if (!entry) {
-        throw new Error("Registro nao encontrado");
+        throw new Error("Registro não encontrado");
       }
 
       await createEntry({
@@ -511,6 +828,8 @@ export default function TimePage() {
             onApplySuggestion={(suggestion) => {
               void handleApplySuggestion(suggestion);
             }}
+            onApplySuggestionCommit={handleApplySuggestionCommit}
+            appliedSuggestionCommitKeys={appliedSuggestionCommitKeys}
             onEditSuggestion={handleEditSuggestion}
             onIgnoreSuggestion={handleIgnoreSuggestion}
           />
@@ -553,6 +872,20 @@ export default function TimePage() {
           }}
         />
       </motion.section>
+
+      <TimeEntryForm
+        open={Boolean(createTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreateTarget(undefined);
+            setPendingSuggestionSubmission(null);
+          }
+        }}
+        onSubmit={handleCreateFromSuggestionSubmit}
+        initialValues={createTarget}
+        mode="create"
+        allowContinue={false}
+      />
 
       <TimeEntryForm
         open={Boolean(editTarget)}

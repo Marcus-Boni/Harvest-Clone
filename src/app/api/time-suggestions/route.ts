@@ -109,6 +109,29 @@ function toIsoDayBounds(date: string) {
   };
 }
 
+async function mapWithConcurrencyLimit<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+
+  return results;
+}
+
 export async function GET(req: Request): Promise<Response> {
   const session = await getActiveSession(req.headers);
   if (!session) {
@@ -287,8 +310,12 @@ export async function GET(req: Request): Promise<Response> {
             configuredAuthor: config.commitAuthor,
           });
 
-          const commitBuckets = await Promise.all(
-            projects.slice(0, 8).map(async (internalProject) => {
+          // Keep the Azure fan-out bounded while still fetching every
+          // accessible project's commits for the selected day.
+          const commitBuckets = await mapWithConcurrencyLimit(
+            projects,
+            4,
+            async (internalProject) => {
               try {
                 return await client.getRecentCommits(
                   internalProject.azureProjectId ?? internalProject.name,
@@ -296,17 +323,22 @@ export async function GET(req: Request): Promise<Response> {
                     authorCandidates,
                     fromDate: dayBounds.start,
                     toDate: dayBounds.end,
-                    top: 20,
                     projectLabel: internalProject.name,
                   },
                 );
               } catch {
                 return [];
               }
-            }),
+            },
           );
 
-          commits = commitBuckets.flat();
+          commits = commitBuckets
+            .flat()
+            .sort(
+              (a, b) =>
+                new Date(b.timestamp).getTime() -
+                new Date(a.timestamp).getTime(),
+            );
         }
       } catch (error) {
         console.warn("[time_suggestions][azure_commits_failed]", {

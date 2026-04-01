@@ -56,6 +56,13 @@ interface TimeEntryFormFieldsProps {
   workItem: { id: number; title: string } | null;
   onWorkItemChange: (value: { id: number; title: string } | null) => void;
   onOpenAgenda?: () => void;
+  descriptionVariants?: {
+    concise: string;
+    packaged: string;
+    sourceLabel?: string;
+  };
+  activeDescriptionVariant?: "concise" | "packaged" | null;
+  onDescriptionVariantChange?: (variant: "concise" | "packaged") => void;
 }
 
 export function TimeEntryFormFields({
@@ -64,6 +71,9 @@ export function TimeEntryFormFields({
   workItem,
   onWorkItemChange,
   onOpenAgenda,
+  descriptionVariants,
+  activeDescriptionVariant,
+  onDescriptionVariantChange,
 }: TimeEntryFormFieldsProps) {
   const selectedProjectId = form.watch("projectId");
   const selectedProject = projects.find(
@@ -77,6 +87,10 @@ export function TimeEntryFormFields({
   const selectedDate = form.watch("date");
   const selectedDuration = form.watch("duration");
   const billable = form.watch("billable");
+  const description = form.watch("description");
+  const hasDescriptionVariants =
+    Boolean(descriptionVariants) &&
+    descriptionVariants?.concise !== descriptionVariants?.packaged;
 
   return (
     <div className="space-y-5 px-5 py-5 sm:px-6">
@@ -129,32 +143,74 @@ export function TimeEntryFormFields({
       </div>
 
       <div className="space-y-1.5">
-        <Label>Descrição *</Label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Label>Descrição *</Label>
+          {hasDescriptionVariants && onDescriptionVariantChange ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  activeDescriptionVariant === "packaged"
+                    ? "default"
+                    : "outline"
+                }
+                className={
+                  activeDescriptionVariant === "packaged"
+                    ? "h-8 rounded-full bg-brand-500 px-3 text-white hover:bg-brand-600"
+                    : "h-8 rounded-full px-3"
+                }
+                onClick={() => onDescriptionVariantChange("packaged")}
+              >
+                Pacote inteligente
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={
+                  activeDescriptionVariant === "concise" ? "default" : "outline"
+                }
+                className={
+                  activeDescriptionVariant === "concise"
+                    ? "h-8 rounded-full bg-brand-500 px-3 text-white hover:bg-brand-600"
+                    : "h-8 rounded-full px-3"
+                }
+                onClick={() => onDescriptionVariantChange("concise")}
+              >
+                Resumo curto
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
         <Textarea
           {...form.register("description")}
           placeholder="Descreva de forma objetiva o que foi feito."
           rows={4}
           className="rounded-md bg-background/80"
         />
+
         {form.formState.errors.description ? (
-          <p className="text-xs text-destructive mt-1.5">
+          <p className="mt-1.5 text-xs text-destructive">
             {form.formState.errors.description.message}
           </p>
         ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-1.5 min-h-[22px]">
-            <p className="text-xs text-muted-foreground mr-2">
-              A agenda do Outlook pode preencher esse campo automaticamente.
+          <div className="mt-1.5 flex min-h-[22px] flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="mr-2 text-xs text-muted-foreground">
+              {hasDescriptionVariants
+                ? `${descriptionVariants?.sourceLabel ?? "Sugestão inteligente"} pronta para edição. ${description.length} caracteres no campo.`
+                : "A agenda do Outlook pode preencher esse campo automaticamente."}
             </p>
-            {onOpenAgenda && (
+            {onOpenAgenda ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-500 hover:text-brand-600 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 rounded-sm"
+                className="inline-flex items-center gap-1.5 rounded-sm text-xs font-semibold text-brand-500 transition-colors hover:text-brand-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
                 onClick={onOpenAgenda}
               >
                 <CalendarClock className="h-3.5 w-3.5" />
                 <span>Integração Outlook</span>
               </button>
-            )}
+            ) : null}
           </div>
         )}
       </div>

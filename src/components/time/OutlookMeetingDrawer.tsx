@@ -130,24 +130,29 @@ export function OutlookMeetingDrawer({
             No dia
           </div>
           <p className="mt-2 text-sm font-medium text-foreground">
-            {entries.length} {entries.length === 1 ? "lancamento" : "lancamentos"}
+            {entries.length}{" "}
+            {entries.length === 1 ? "lancamento" : "lancamentos"}
           </p>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-2xl border border-border/60 bg-background/70 px-4 py-3">
-        <div className="pr-4">
-          <p className="text-sm font-medium text-foreground">
-            Abrir junto com lancamento
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Exibir esta agenda aberta por padrao no modal de registro.
-          </p>
+      <div className="mt-3 rounded-xl border border-border/50 bg-background/60 px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 pr-2">
+            <p
+              id="outlook-drawer-default-open-label"
+              className="text-xs font-medium text-foreground/90"
+            >
+              Abrir junto com lançamento
+            </p>
+          </div>
+          <Switch
+            size="sm"
+            checked={defaultOpen}
+            onCheckedChange={handleDefaultOpenChange}
+            aria-labelledby="outlook-drawer-default-open-label"
+          />
         </div>
-        <Switch
-          checked={defaultOpen}
-          onCheckedChange={handleDefaultOpenChange}
-        />
       </div>
 
       {outlook.status === "needs_reconnect" && (
@@ -156,8 +161,8 @@ export function OutlookMeetingDrawer({
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="space-y-3">
               <p className="text-muted-foreground">
-                A conexao Microsoft foi encontrada, mas o refresh token nao
-                esta mais utilizavel. Reconecte a integracao.
+                A conexao Microsoft foi encontrada, mas o refresh token nao esta
+                mais utilizavel. Reconecte a integracao.
               </p>
               <Button
                 variant="outline"

@@ -232,7 +232,7 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
 
   async function listRepositories(
     projectName: string,
-    top = 30,
+    top?: number,
   ): Promise<AzureDevOpsRepository[]> {
     const repositoriesResult = await fetchApi<{
       value: Array<{
@@ -244,7 +244,12 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
       `${orgUrl}/${encodeURIComponent(projectName)}/_apis/git/repositories?api-version=7.1`,
     );
 
-    return repositoriesResult.value.slice(0, top).map((repository) => ({
+    const repositories =
+      typeof top === "number"
+        ? repositoriesResult.value.slice(0, top)
+        : repositoriesResult.value;
+
+    return repositories.map((repository) => ({
       id: repository.id,
       name: repository.name,
       remoteUrl: repository.remoteUrl,
@@ -261,7 +266,7 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
       projectLabel?: string;
     },
   ): Promise<AzureDevOpsCommit[]> {
-    const repositories = await listRepositories(projectRef, 10);
+    const repositories = await listRepositories(projectRef);
     const projectLabel = options.projectLabel ?? projectRef;
     const authorCandidates = Array.from(
       new Set(
@@ -275,66 +280,84 @@ export function createAzureDevOpsClient(organizationUrl: string, pat: string) {
       return [];
     }
 
-    const perRepoTop = Math.max(
-      5,
-      Math.floor((options.top ?? 40) / Math.max(1, repositories.length)),
-    );
+    const pageSize = Math.max(20, Math.min(options.top ?? 100, 200));
 
     async function fetchRepoCommits(
       repository: AzureDevOpsRepository,
       authorCandidate?: string,
     ) {
-      const params = new URLSearchParams({
-        "searchCriteria.fromDate": options.fromDate,
-        "searchCriteria.toDate": options.toDate,
-        "searchCriteria.$top": String(perRepoTop),
-        "api-version": "7.1",
-      });
+      const commits: AzureDevOpsCommit[] = [];
+      let skip = 0;
 
-      if (authorCandidate) {
-        params.set("searchCriteria.author", authorCandidate);
+      while (true) {
+        const params = new URLSearchParams({
+          "searchCriteria.fromDate": options.fromDate,
+          "searchCriteria.toDate": options.toDate,
+          "searchCriteria.$skip": String(skip),
+          "searchCriteria.$top": String(pageSize),
+          "api-version": "7.1",
+        });
+
+        if (authorCandidate) {
+          params.set("searchCriteria.author", authorCandidate);
+        }
+
+        const result = await fetchApi<{
+          value: Array<{
+            commitId: string;
+            comment?: string;
+            author?: { date?: string; email?: string; name?: string };
+            committer?: { date?: string };
+            remoteUrl?: string;
+          }>;
+        }>(
+          `${orgUrl}/${encodeURIComponent(projectRef)}/_apis/git/repositories/${encodeURIComponent(repository.id)}/commits?${params.toString()}`,
+        );
+
+        const normalizedCommits = result.value
+          .map((commit) => {
+            const text = commit.comment ?? "";
+            const workItemIds = parseWorkItemIdsFromText(text);
+            const branch =
+              text.match(
+                /(?:branch|refs\/heads\/|feature\/|bugfix\/|hotfix\/)([\w/-]+)/i,
+              )?.[1] ?? null;
+
+            return {
+              id: `${repository.id}:${commit.commitId}`,
+              commitId: commit.commitId,
+              repositoryId: repository.id,
+              repositoryName: repository.name,
+              projectName: projectLabel,
+              message: text.split("\n")[0] ?? "",
+              comment: text,
+              authorEmail: commit.author?.email ?? null,
+              authorName: commit.author?.name ?? null,
+              branch,
+              timestamp:
+                commit.author?.date ??
+                commit.committer?.date ??
+                new Date().toISOString(),
+              workItemIds,
+            } satisfies AzureDevOpsCommit;
+          })
+          .filter((commit) => matchesCommitAuthor(commit, authorCandidates));
+
+        commits.push(...normalizedCommits);
+
+        if (
+          result.value.length < pageSize ||
+          (typeof options.top === "number" && commits.length >= options.top)
+        ) {
+          break;
+        }
+
+        skip += result.value.length;
       }
 
-      const result = await fetchApi<{
-        value: Array<{
-          commitId: string;
-          comment?: string;
-          author?: { date?: string; email?: string; name?: string };
-          committer?: { date?: string };
-          remoteUrl?: string;
-        }>;
-      }>(
-        `${orgUrl}/${encodeURIComponent(projectRef)}/_apis/git/repositories/${encodeURIComponent(repository.id)}/commits?${params.toString()}`,
-      );
-
-      return result.value
-        .map((commit) => {
-          const text = commit.comment ?? "";
-          const workItemIds = parseWorkItemIdsFromText(text);
-          const branch =
-            text.match(
-              /(?:branch|refs\/heads\/|feature\/|bugfix\/|hotfix\/)([\w/-]+)/i,
-            )?.[1] ?? null;
-
-          return {
-            id: `${repository.id}:${commit.commitId}`,
-            commitId: commit.commitId,
-            repositoryId: repository.id,
-            repositoryName: repository.name,
-            projectName: projectLabel,
-            message: text.split("\n")[0] ?? "",
-            comment: text,
-            authorEmail: commit.author?.email ?? null,
-            authorName: commit.author?.name ?? null,
-            branch,
-            timestamp:
-              commit.author?.date ??
-              commit.committer?.date ??
-              new Date().toISOString(),
-            workItemIds,
-          } satisfies AzureDevOpsCommit;
-        })
-        .filter((commit) => matchesCommitAuthor(commit, authorCandidates));
+      return typeof options.top === "number"
+        ? commits.slice(0, options.top)
+        : commits;
     }
 
     let commitBuckets: AzureDevOpsCommit[][] = [];

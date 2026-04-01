@@ -1,37 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { TimeSuggestion } from "@/types/time-suggestions";
 
-export type SuggestionConfidence = "high" | "medium" | "low";
-
-export interface TimeSuggestion {
-  fingerprint: string;
-  projectId: string | null;
-  projectName: string | null;
-  description: string;
-  date: string;
-  duration: number;
-  billable: boolean;
-  azureWorkItemId: number | null;
-  azureWorkItemTitle: string | null;
-  score: number;
-  confidence: SuggestionConfidence;
-  reasons: string[];
-  sourceBreakdown: {
-    commits: number;
-    meetings: number;
-    recency: number;
-  };
-  payload: {
-    projectId: string;
-    description: string;
-    date: string;
-    duration: number;
-    billable: boolean;
-    azureWorkItemId?: number;
-    azureWorkItemTitle?: string;
-  } | null;
-}
+export type {
+  SuggestionConfidence,
+  TimeSuggestion,
+  TimeSuggestionActivitySummary,
+  TimeSuggestionCommit,
+} from "@/types/time-suggestions";
 
 interface UseTimeSuggestionsOptions {
   date: string;
