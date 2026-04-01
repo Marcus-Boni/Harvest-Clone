@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut, useSession } from "@/lib/auth-client";
-import { MOCK_CURRENT_USER } from "@/lib/mock-data";
+
 import { useUIStore } from "@/stores/ui.store";
 import type { User as UserType } from "@/types/user";
 export function Header() {
@@ -45,7 +45,7 @@ export function Header() {
     : ((session?.user as unknown as UserType) ?? null);
   const isManager =
     !isPending && (user?.role === "manager" || user?.role === "admin");
-  const currentUser = user || MOCK_CURRENT_USER;
+  const currentUser = user;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -54,6 +54,12 @@ export function Header() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isPending && !user) {
+      router.push("/login?reason=missing-session");
+    }
+  }, [isPending, user, router]);
 
   const handleLogout = async () => {
     await signOut({
@@ -76,6 +82,14 @@ export function Header() {
       source: pathname.startsWith("/dashboard/time") ? "time-header" : "header",
     });
   };
+
+  if (isPending || !currentUser) {
+    return (
+      <header className="sticky top-0 z-30 flex h-16 items-center px-4 md:px-6 border-b border-border bg-background/80 backdrop-blur-xl">
+         <div className="h-5 w-32 bg-muted/20 animate-pulse rounded-md" />
+      </header>
+    );
+  }
 
   return (
     <header

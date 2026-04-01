@@ -88,7 +88,11 @@ export default async function middleware(
         forwardedHost: forwardedHostHeader,
         forwardedProto: forwardedProtoHeader,
       });
-      session = null;
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        session = null;
+      } else {
+        session = hasAuthCookie ? { user: {} } : null;
+      }
     } else {
       session = await response.json();
       sessionVerified = true;
@@ -99,7 +103,7 @@ export default async function middleware(
       message: error instanceof Error ? error.message : String(error),
       hasAuthCookie,
     });
-    session = null;
+    session = hasAuthCookie ? { user: {} } : null;
   }
 
   const isAuthPage = isPublicAuthRoute(pathname);
