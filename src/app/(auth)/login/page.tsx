@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { signIn } from "@/lib/auth-client";
+
+const LOGIN_SUCCESS_TOAST_SESSION_KEY = "auth:show-login-success";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -63,14 +65,16 @@ export default function LoginPage() {
             id: "auth-inactive-user",
             duration: 6000,
           });
+        } else if (reason === "signed-out") {
+          toast.success("Logout realizado com sucesso.", {
+            id: "auth-signed-out",
+            duration: 4000,
+          });
         } else if (reason === "missing-session") {
-          toast.error(
-            "O login foi concluído, mas a sessão não foi reconhecida pela aplicação.",
-            {
-              id: "auth-missing-session",
-              duration: 6000,
-            },
-          );
+          toast.error("Sua sessão expirou. Faça login novamente.", {
+            id: "auth-missing-session",
+            duration: 6000,
+          });
         }
 
         window.history.replaceState(
@@ -87,6 +91,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    window.sessionStorage.setItem(LOGIN_SUCCESS_TOAST_SESSION_KEY, "1");
 
     const { error } = await signIn.email({
       email,
@@ -95,6 +100,7 @@ export default function LoginPage() {
     });
 
     if (error) {
+      window.sessionStorage.removeItem(LOGIN_SUCCESS_TOAST_SESSION_KEY);
       toast.error(error.message || "Erro ao fazer login");
       setIsLoading(false);
     }
@@ -102,6 +108,7 @@ export default function LoginPage() {
 
   const handleMicrosoftLogin = async () => {
     setIsLoading(true);
+    window.sessionStorage.setItem(LOGIN_SUCCESS_TOAST_SESSION_KEY, "1");
 
     const { error } = await signIn.social({
       provider: "microsoft",
@@ -109,6 +116,7 @@ export default function LoginPage() {
     });
 
     if (error) {
+      window.sessionStorage.removeItem(LOGIN_SUCCESS_TOAST_SESSION_KEY);
       toast.error(error.message || "Erro ao tentar login com Microsoft");
       setIsLoading(false);
     }
@@ -123,6 +131,13 @@ export default function LoginPage() {
         ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
       }}
     >
+      <Link
+        href="/"
+        className="group mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+        Voltar para o início
+      </Link>
       <Card className="border-border/50 bg-card/80 backdrop-blur-xl">
         <CardHeader className="space-y-4 text-center">
           {/* Logo */}

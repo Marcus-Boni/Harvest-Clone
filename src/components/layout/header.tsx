@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { QuickEntryDialog } from "@/components/layout/quick-entry-dialog";
@@ -31,6 +32,9 @@ import { signOut, useSession } from "@/lib/auth-client";
 
 import { useUIStore } from "@/stores/ui.store";
 import type { User as UserType } from "@/types/user";
+
+const LOGIN_SUCCESS_TOAST_SESSION_KEY = "auth:show-login-success";
+
 export function Header() {
   const {
     theme,
@@ -51,25 +55,49 @@ export function Header() {
   const pathname = usePathname();
 
   const [mounted, setMounted] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!isPending && !user) {
-      router.push("/login?reason=missing-session");
+    if (!isPending && !user && !isLoggingOut) {
+      router.replace("/login?reason=missing-session");
     }
-  }, [isPending, user, router]);
+  }, [isPending, user, isLoggingOut, router]);
+
+  useEffect(() => {
+    if (isPending || !user || typeof window === "undefined") {
+      return;
+    }
+
+    const shouldShowLoginToast =
+      window.sessionStorage.getItem(LOGIN_SUCCESS_TOAST_SESSION_KEY) === "1";
+
+    if (!shouldShowLoginToast) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(LOGIN_SUCCESS_TOAST_SESSION_KEY);
+    toast.success("Login realizado com sucesso. Bem-vindo(a)!", {
+      id: "auth-login-success",
+      duration: 4000,
+    });
+  }, [isPending, user]);
 
   const handleLogout = async () => {
-    await signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/");
-        },
-      },
-    });
+    setIsLoggingOut(true);
+
+    const { error } = await signOut();
+
+    if (error) {
+      setIsLoggingOut(false);
+      toast.error(error.message || "Não foi possível encerrar a sessão.");
+      return;
+    }
+
+    router.replace("/login?reason=signed-out");
   };
 
   const openRichQuickEntry = () => {
@@ -87,7 +115,7 @@ export function Header() {
   if (isPending || !currentUser) {
     return (
       <header className="sticky top-0 z-30 flex h-16 items-center px-4 md:px-6 border-b border-border bg-background/80 backdrop-blur-xl">
-         <div className="h-5 w-32 bg-muted/20 animate-pulse rounded-md" />
+        <div className="h-5 w-32 bg-muted/20 animate-pulse rounded-md" />
       </header>
     );
   }
