@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FolderKanban, MoreHorizontal, UserCheck, UserX } from "lucide-react";
+import { Bell, FolderKanban, MoreHorizontal, UserCheck, UserX } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import ManageProjectsDialog from "@/components/people/ManageProjectsDialog";
+import ReminderSingleModal from "@/components/people/ReminderSingleModal";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import {
   AlertDialog,
@@ -73,6 +74,7 @@ export default function PersonCard({
 }: PersonCardProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isManageProjectsOpen, setIsManageProjectsOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const canManage = sessionRole === "admin" || sessionRole === "manager";
@@ -280,6 +282,13 @@ export default function PersonCard({
                     <FolderKanban className="mr-2 h-3.5 w-3.5" />
                     Gerenciar projetos
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsReminderOpen(true)}
+                    className="text-xs"
+                  >
+                    <Bell className="mr-2 h-3.5 w-3.5" />
+                    Enviar lembrete de horas
+                  </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-xs">Cargo</DropdownMenuLabel>
@@ -390,6 +399,13 @@ export default function PersonCard({
         onOpenChange={setIsManageProjectsOpen}
         userId={person.id}
         userName={person.name || "Usuario"}
+      />
+
+      <ReminderSingleModal
+        open={isReminderOpen}
+        onOpenChange={setIsReminderOpen}
+        userId={person.id}
+        userName={person.name || "Usuário"}
       />
     </>
   );
