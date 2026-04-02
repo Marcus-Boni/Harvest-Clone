@@ -31,6 +31,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTimesheetDetail } from "@/hooks/use-timesheets";
+import { isTimesheetSubmittableStatus } from "@/lib/timesheet-status";
 import { formatDuration, getPeriodRange, parseLocalDate } from "@/lib/utils";
 
 const containerVariants = {
@@ -222,11 +223,8 @@ export default function TimesheetDetailPage() {
     : null;
   const currentWeek = `${format(new Date(), "yyyy")}-W${getISOWeek(new Date()).toString().padStart(2, "0")}`;
   const isCurrentWeek = timesheet.period === currentWeek;
-  const canSubmit =
-    timesheet.status === "open" ||
-    timesheet.status === "rejected" ||
-    timesheet.status === "submitted";
-  const isResubmission = timesheet.status === "submitted";
+  const canSubmit = isTimesheetSubmittableStatus(timesheet.status);
+  const isResubmission = timesheet.status === "rejected";
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -235,7 +233,7 @@ export default function TimesheetDetailPage() {
       await submitTimesheet();
       toast.success(
         isResubmission
-          ? "Timesheet re-submetido com sucesso."
+          ? "Timesheet submetido novamente com sucesso."
           : "Timesheet submetido com sucesso.",
       );
     } catch (submitError) {
@@ -243,7 +241,7 @@ export default function TimesheetDetailPage() {
         submitError instanceof Error
           ? submitError.message
           : isResubmission
-            ? "Não foi possível re-submeter o timesheet."
+            ? "Não foi possível submeter o timesheet novamente."
             : "Não foi possível submeter o timesheet.",
       );
     } finally {
@@ -310,10 +308,10 @@ export default function TimesheetDetailPage() {
                   <Send className="h-4 w-4" />
                   {submitting
                     ? isResubmission
-                      ? "Re-submetendo..."
+                      ? "Submetendo novamente..."
                       : "Submetendo..."
                     : isResubmission
-                      ? "Re-submeter timesheet"
+                      ? "Submeter timesheet novamente"
                       : "Submeter timesheet"}
                 </Button>
               )}

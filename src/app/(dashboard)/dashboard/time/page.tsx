@@ -4,8 +4,6 @@ import {
   endOfISOWeek,
   endOfMonth,
   format,
-  getISOWeek,
-  getISOWeekYear,
   startOfISOWeek,
   startOfMonth,
 } from "date-fns";
@@ -27,6 +25,7 @@ import {
   type OutlookEvent,
 } from "@/hooks/use-outlook-events";
 import { type TimeEntry, useTimeEntries } from "@/hooks/use-time-entries";
+import { useTimesheetStatus } from "@/hooks/use-timesheet-status";
 import {
   type TimeSuggestion,
   type TimeSuggestionCommit,
@@ -35,6 +34,8 @@ import {
 import { useTimesheets } from "@/hooks/use-timesheets";
 import { useSession } from "@/lib/auth-client";
 import { getTimePreferences, saveTimePreference } from "@/lib/time-preferences";
+import { getTimesheetStatusLabel } from "@/lib/timesheet-status";
+import { getWeekPeriod } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui.store";
 
 const containerVariants = {
@@ -185,11 +186,6 @@ function estimateCommitDuration(suggestion: TimeSuggestion) {
   return roundToQuarterHour(Math.min(120, Math.max(15, distributedMinutes)));
 }
 
-function getWeekPeriod(date: Date) {
-  const weekStart = startOfISOWeek(date);
-  return `${getISOWeekYear(weekStart)}-W${getISOWeek(weekStart).toString().padStart(2, "0")}`;
-}
-
 export default function TimePage() {
   const { data: session } = useSession();
   const weeklyCapacityHours =
@@ -324,6 +320,11 @@ export default function TimePage() {
 
   const latestEntry = entries[0];
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+  const selectedDateTimesheetStatus = useTimesheetStatus(selectedDateStr);
+  const selectedDateLocked = selectedDateTimesheetStatus.locked;
+  const selectedDateLockMessage = selectedDateTimesheetStatus.status
+    ? `Não é possível registrar horas porque a semana selecionada já foi ${getTimesheetStatusLabel(selectedDateTimesheetStatus.status)}.`
+    : "Não é possível registrar horas na data selecionada.";
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const assistantFeatureEnabled =
     process.env.NEXT_PUBLIC_TIME_ASSISTANT_ENABLED !== "false";
@@ -529,6 +530,11 @@ export default function TimePage() {
 
   const handleApplySuggestionCommit = useCallback(
     (suggestion: TimeSuggestion, commit: TimeSuggestionCommit) => {
+      if (selectedDateLocked) {
+        toast.error(selectedDateLockMessage);
+        return;
+      }
+
       const commitKey = buildSuggestionCommitKey(
         suggestion.fingerprint,
         commit.id,
@@ -566,7 +572,7 @@ export default function TimePage() {
         "Revise este commit individual antes de salvar o lançamento.",
       );
     },
-    [openSuggestionCreate],
+    [openSuggestionCreate, selectedDateLockMessage, selectedDateLocked],
   );
 
   const handleEdit = useCallback((entry: TimeEntry) => {
@@ -591,6 +597,11 @@ export default function TimePage() {
 
   const handleDuplicate = useCallback(
     (entry: TimeEntry) => {
+      if (selectedDateLocked) {
+        toast.error(selectedDateLockMessage);
+        return;
+      }
+
       openCreate({
         billable: entry.billable,
         date: format(selectedDate, "yyyy-MM-dd"),
@@ -601,11 +612,16 @@ export default function TimePage() {
         azureWorkItemTitle: entry.azureWorkItemTitle ?? undefined,
       });
     },
-    [openCreate, selectedDate],
+    [openCreate, selectedDate, selectedDateLockMessage, selectedDateLocked],
   );
 
   const handleCreateFromOutlook = useCallback(
     (event: OutlookEvent) => {
+      if (selectedDateLocked) {
+        toast.error(selectedDateLockMessage);
+        return;
+      }
+
       const iso = event.start.dateTime;
       const eventDate = new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
 
@@ -617,7 +633,7 @@ export default function TimePage() {
         projectId: latestEntry?.projectId,
       });
     },
-    [latestEntry, openCreate],
+    [latestEntry, openCreate, selectedDateLockMessage, selectedDateLocked],
   );
 
   const handleDayClick = useCallback((date: Date) => {
@@ -650,6 +666,11 @@ export default function TimePage() {
 
   const handleApplySuggestion = useCallback(
     async (suggestion: TimeSuggestion) => {
+      if (selectedDateLocked) {
+        toast.error(selectedDateLockMessage);
+        return;
+      }
+
       const shouldOpenSuggestionForm = typeof window !== "undefined";
 
       if (shouldOpenSuggestionForm) {
@@ -692,11 +713,18 @@ export default function TimePage() {
       openCreate,
       openSuggestionCreate,
       sendFeedback,
+      selectedDateLockMessage,
+      selectedDateLocked,
     ],
   );
 
   const handleEditSuggestion = useCallback(
     (suggestion: TimeSuggestion) => {
+      if (selectedDateLocked) {
+        toast.error(selectedDateLockMessage);
+        return;
+      }
+
       const shouldOpenSuggestionForm = typeof window !== "undefined";
 
       if (shouldOpenSuggestionForm) {
@@ -724,7 +752,7 @@ export default function TimePage() {
         azureWorkItemTitle: source.azureWorkItemTitle,
       });
     },
-    [openCreate, openSuggestionCreate],
+    [openCreate, openSuggestionCreate, selectedDateLockMessage, selectedDateLocked],
   );
 
   const handleIgnoreSuggestion = useCallback(
@@ -811,6 +839,8 @@ export default function TimePage() {
           <DayView
             entries={entries}
             selectedDate={selectedDate}
+            selectedDateLocked={selectedDateLocked}
+            selectedDateLockStatus={selectedDateTimesheetStatus.status}
             onSelectedDateChange={setSelectedDate}
             onEdit={handleEdit}
             onDelete={handleDelete}

@@ -1,12 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
-const TIMESHEETS_UPDATED_EVENT = "timesheets:updated";
-
-function dispatchTimesheetsUpdated() {
-  window.dispatchEvent(new Event(TIMESHEETS_UPDATED_EVENT));
-}
+import {
+  dispatchTimesheetsUpdated,
+  TIMESHEETS_UPDATED_EVENT,
+} from "@/lib/time-events";
 
 interface UseTimesheetsOptions {
   enabled?: boolean;

@@ -34,6 +34,8 @@ interface SmartSuggestionsPanelProps {
   loading: boolean;
   error: string | null;
   enabled: boolean;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
   onRetry: () => void;
   onApply: (suggestion: TimeSuggestion) => void;
   onApplyCommit: (
@@ -96,12 +98,16 @@ function SuggestionCommitRow({
   canApplyIndividually = false,
   commit,
   isApplied = false,
+  isDisabled = false,
+  disabledReason,
   onApplyCommit,
   subdued = false,
 }: {
   canApplyIndividually?: boolean;
   commit: TimeSuggestionCommit;
   isApplied?: boolean;
+  isDisabled?: boolean;
+  disabledReason?: string;
   onApplyCommit?: () => void;
   subdued?: boolean;
 }) {
@@ -171,8 +177,9 @@ function SuggestionCommitRow({
             size="sm"
             variant={isApplied ? "secondary" : "outline"}
             className="rounded-full self-start"
-            disabled={isApplied}
+            disabled={isApplied || isDisabled}
             onClick={onApplyCommit}
+            title={isDisabled ? disabledReason : undefined}
           >
             {isApplied ? "Adicionado" : "Registrar este commit"}
           </Button>
@@ -187,6 +194,8 @@ export function SmartSuggestionsPanel({
   loading,
   error,
   enabled,
+  actionsDisabled = false,
+  actionsDisabledReason,
   onRetry,
   onApply,
   onApplyCommit,
@@ -230,6 +239,8 @@ export function SmartSuggestionsPanel({
           size="sm"
           className="rounded-full"
           onClick={onRetry}
+          disabled={actionsDisabled}
+          title={actionsDisabled ? actionsDisabledReason : undefined}
           aria-label="Atualizar sugestões"
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
@@ -428,6 +439,8 @@ export function SmartSuggestionsPanel({
                           key={commit.id}
                           canApplyIndividually={canApplyIndividualCommit}
                           commit={commit}
+                          isDisabled={actionsDisabled}
+                          disabledReason={actionsDisabledReason}
                           isApplied={appliedCommitKeys.includes(
                             `${suggestion.fingerprint}:${commit.id}`,
                           )}
@@ -452,6 +465,8 @@ export function SmartSuggestionsPanel({
                                 key={commit.id}
                                 canApplyIndividually={canApplyIndividualCommit}
                                 commit={commit}
+                                isDisabled={actionsDisabled}
+                                disabledReason={actionsDisabledReason}
                                 isApplied={appliedCommitKeys.includes(
                                   `${suggestion.fingerprint}:${commit.id}`,
                                 )}
@@ -473,6 +488,8 @@ export function SmartSuggestionsPanel({
                     size="sm"
                     className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
                     onClick={() => onApply(suggestion)}
+                    disabled={actionsDisabled}
+                    title={actionsDisabled ? actionsDisabledReason : undefined}
                   >
                     {suggestion.payload
                       ? "Aplicar"
@@ -483,6 +500,8 @@ export function SmartSuggestionsPanel({
                     variant="outline"
                     className="rounded-full"
                     onClick={() => onEditAndApply(suggestion)}
+                    disabled={actionsDisabled}
+                    title={actionsDisabled ? actionsDisabledReason : undefined}
                   >
                     Editar
                   </Button>

@@ -60,6 +60,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { TimeEntry } from "@/hooks/use-time-entries";
+import {
+  getTimesheetStatusLabel,
+  isTimesheetEditableStatus,
+  isTimesheetLockedStatus,
+  isTimesheetSubmittableStatus,
+} from "@/lib/timesheet-status";
 import { cn, formatDuration } from "@/lib/utils";
 
 interface WeekViewProps {
@@ -133,6 +139,10 @@ export function WeekView({
   } | null>(null);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const weekLocked = isTimesheetLockedStatus(weekTimesheetStatus);
+  const weekLockMessage = weekTimesheetStatus
+    ? `A semana está ${getTimesheetStatusLabel(weekTimesheetStatus)} e não aceita novos lançamentos.`
+    : "A semana está bloqueada para novos lançamentos.";
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -145,16 +155,14 @@ export function WeekView({
   );
 
   const isEntryDraggable = useCallback((entry: TimeEntry) => {
-    const status = entry.timesheet?.status;
-    return (
-      entry.timesheetId === null ||
-      status === "open" ||
-      status === "rejected" ||
-      status === "submitted"
-    );
-  }, []);
+    if (weekLocked) {
+      return false;
+    }
 
-  const isResubmission = weekTimesheetStatus === "submitted";
+    return isTimesheetEditableStatus(entry.timesheet?.status);
+  }, [weekLocked]);
+
+  const isResubmission = weekTimesheetStatus === "rejected";
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -263,14 +271,14 @@ export function WeekView({
       await onSubmitWeek();
       toast.success(
         isResubmission
-          ? "Semana re-submetida com sucesso."
+          ? "Semana submetida novamente com sucesso."
           : "Semana submetida com sucesso.",
       );
       setConfirmSubmit(false);
     } catch {
       toast.error(
         isResubmission
-          ? "Erro ao re-submeter semana."
+          ? "Erro ao submeter a semana novamente."
           : "Erro ao submeter semana.",
       );
     } finally {
@@ -308,7 +316,7 @@ export function WeekView({
               className="rounded-full"
               onClick={() => onReferenceDateChange(new Date())}
             >
-              Semana atual
+              Ir para semana atual
             </Button>
           </div>
 
@@ -330,28 +338,12 @@ export function WeekView({
             </Badge>
 
             {weekTimesheetStatus === "submitted" ? (
-              <>
-                <Badge
-                  variant="outline"
-                  className="rounded-full border-amber-300 px-3 py-1.5 text-amber-600"
-                >
-                  Submetida
-                </Badge>
-                {onSubmitWeek ? (
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => setConfirmSubmit(true)}
-                    disabled={weekEntryCountValue === 0}
-                    title={
-                      weekEntryCountValue === 0 ? "Sem registros" : undefined
-                    }
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    Re-submeter semana
-                  </Button>
-                ) : null}
-              </>
+              <Badge
+                variant="outline"
+                className="rounded-full border-amber-300 px-3 py-1.5 text-amber-600"
+              >
+                Submetida
+              </Badge>
             ) : weekTimesheetStatus === "approved" ? (
               <Badge
                 variant="outline"
@@ -359,7 +351,7 @@ export function WeekView({
               >
                 Aprovada
               </Badge>
-            ) : onSubmitWeek ? (
+            ) : onSubmitWeek && isTimesheetSubmittableStatus(weekTimesheetStatus) ? (
               <Button
                 variant="outline"
                 className="rounded-full"
@@ -368,10 +360,16 @@ export function WeekView({
                 title={weekEntryCountValue === 0 ? "Sem registros" : undefined}
               >
                 <Send className="mr-2 h-4 w-4" />
-                Submeter semana
+                {isResubmission ? "Submeter novamente" : "Submeter semana"}
               </Button>
             ) : null}
           </div>
+
+          {weekLocked ? (
+            <p className="max-w-sm text-right text-xs text-muted-foreground">
+              {weekLockMessage}
+            </p>
+          ) : null}
 
           {/* Week progress bar */}
           <div className="flex w-full items-center gap-3 sm:w-64">
@@ -415,6 +413,8 @@ export function WeekView({
                   onDayClick={onDayClick}
                   onOpenCreateForDate={onOpenCreateForDate}
                   isEntryDraggable={isEntryDraggable}
+                  isLocked={weekLocked}
+                  lockMessage={weekLockMessage}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onDuplicate={onDuplicate}
@@ -443,7 +443,7 @@ export function WeekView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isResubmission ? "Re-submeter" : "Submeter"} semana {weekNumber}{" "}
+              {isResubmission ? "Submeter novamente" : "Submeter"} semana {weekNumber}{" "}
               de {weekYear}?
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -466,10 +466,10 @@ export function WeekView({
             >
               {submitting
                 ? isResubmission
-                  ? "Re-submetendo..."
+                  ? "Submetendo novamente..."
                   : "Submetendo..."
                 : isResubmission
-                  ? "Re-submeter"
+                  ? "Submeter novamente"
                   : "Submeter"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -487,6 +487,8 @@ function DroppableColumn({
   onDayClick,
   onOpenCreateForDate,
   isEntryDraggable,
+  isLocked,
+  lockMessage,
   onEdit,
   onDelete,
   onDuplicate,
@@ -498,6 +500,8 @@ function DroppableColumn({
   onDayClick: (date: Date) => void;
   onOpenCreateForDate?: (date: Date) => void;
   isEntryDraggable: (entry: TimeEntry) => boolean;
+  isLocked: boolean;
+  lockMessage: string;
   onEdit?: (entry: TimeEntry) => void;
   onDelete?: (id: string) => void | Promise<void>;
   onDuplicate?: (entry: TimeEntry) => void;
@@ -612,7 +616,9 @@ function DroppableColumn({
           onClick={() =>
             onOpenCreateForDate ? onOpenCreateForDate(day) : onDayClick(day)
           }
+          disabled={isLocked}
           className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border/60 py-2 text-xs text-muted-foreground transition hover:border-[#16a34a]/40 hover:bg-[#16a34a]/5 hover:text-[#16a34a]"
+          title={isLocked ? lockMessage : undefined}
         >
           <Plus className="h-3.5 w-3.5" />
           <span className="font-medium">Adicionar</span>
@@ -683,10 +689,8 @@ function EntryCard({
   onDuplicate?: (entry: TimeEntry) => void;
 }) {
   const isEditable =
-    entry.timesheetId === null ||
-    entry.timesheet?.status === "open" ||
-    entry.timesheet?.status === "rejected" ||
-    entry.timesheet?.status === "submitted";
+    isTimesheetEditableStatus(entry.timesheet?.status) &&
+    !isTimesheetLockedStatus(entry.timesheet?.status);
 
   return (
     <div

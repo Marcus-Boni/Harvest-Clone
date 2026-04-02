@@ -2,6 +2,8 @@ import { type ClassValue, clsx } from "clsx";
 import {
   addDays,
   endOfISOWeek,
+  getISOWeek,
+  getISOWeekYear,
   endOfMonth,
   format,
   formatDistanceToNow,
@@ -209,4 +211,11 @@ export function getPeriodRange(
     start: format(start, "yyyy-MM-dd"),
     end: format(end, "yyyy-MM-dd"),
   };
+}
+
+export function getWeekPeriod(date: Date | string): string {
+  const parsedDate = typeof date === "string" ? parseLocalDate(date) : date;
+  const weekStart = startOfISOWeek(parsedDate);
+
+  return `${getISOWeekYear(weekStart)}-W${getISOWeek(weekStart).toString().padStart(2, "0")}`;
 }

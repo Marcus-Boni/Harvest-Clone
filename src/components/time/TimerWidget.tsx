@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import {
   ChevronDown,
   ChevronUp,
@@ -16,7 +17,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useTimesheetStatus } from "@/hooks/use-timesheet-status";
 import { useTimer } from "@/hooks/use-timer";
+import { getTimesheetStatusLabel } from "@/lib/timesheet-status";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -32,6 +35,12 @@ interface TimerWidgetProps {
 }
 
 export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
+  const todayDate = format(new Date(), "yyyy-MM-dd");
+  const todayTimesheetStatus = useTimesheetStatus(todayDate);
+  const todayLocked = todayTimesheetStatus.locked;
+  const todayLockMessage = todayTimesheetStatus.status
+    ? `Não é possível usar o timer porque a semana de hoje já foi ${getTimesheetStatusLabel(todayTimesheetStatus.status)}.`
+    : "Não é possível usar o timer hoje.";
   const {
     timer,
     loading,
@@ -85,6 +94,11 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
       : undefined;
 
   const handleStart = useCallback(async () => {
+    if (todayLocked) {
+      toast.error(todayLockMessage);
+      return;
+    }
+
     if (!projectId) {
       toast.error("Selecione um projeto para iniciar o timer.");
       return;
@@ -103,10 +117,10 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel iniciar o timer.",
+          : "Não foi possível iniciar o timer.",
       );
     }
-  }, [billable, description, projectId, startTimer, workItem]);
+  }, [billable, description, projectId, startTimer, todayLockMessage, todayLocked, workItem]);
 
   const handleStop = useCallback(async () => {
     setStopping(true);
@@ -120,7 +134,7 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel encerrar o timer.",
+          : "Não foi possível encerrar o timer.",
       );
     } finally {
       setStopping(false);
@@ -135,7 +149,7 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel pausar o timer.",
+          : "Não foi possível pausar o timer.",
       );
     }
   }, [pauseTimer]);
@@ -148,7 +162,7 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel retomar o timer.",
+          : "Não foi possível retomar o timer.",
       );
     }
   }, [resumeTimer]);
@@ -228,10 +242,17 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
                 ) : null}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Nenhum timer ativo. Abra o painel apenas quando precisar iniciar
-                uma medicao em tempo real.
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Nenhum timer ativo. Abra o painel apenas quando precisar iniciar
+                  uma medicao em tempo real.
+                </p>
+                {todayLocked ? (
+                  <div className="rounded-xl border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                    {todayLockMessage}
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
 
@@ -279,6 +300,8 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => setExpanded((value) => !value)}
+                disabled={todayLocked}
+                title={todayLocked ? todayLockMessage : undefined}
               >
                 {expanded ? (
                   <ChevronUp className="mr-2 h-4 w-4" />
@@ -338,7 +361,8 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
                 size="sm"
                 className="bg-brand-500 text-white hover:bg-brand-600"
                 onClick={handleStart}
-                disabled={!projectId}
+                disabled={!projectId || todayLocked}
+                title={todayLocked ? todayLockMessage : undefined}
               >
                 <Play className="mr-1.5 h-3.5 w-3.5" />
                 Iniciar

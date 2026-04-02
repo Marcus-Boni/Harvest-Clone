@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useTimesheetStatus } from "@/hooks/use-timesheet-status";
 import { OutlookMeetingDrawer } from "@/components/time/OutlookMeetingDrawer";
 import { TimeEntryDialogShell } from "@/components/time/TimeEntryDialogShell";
 import {
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import type { OutlookEvent } from "@/hooks/use-outlook-events";
 import type { TimeEntry } from "@/hooks/use-time-entries";
 import { getTimePreferences, saveTimePreference } from "@/lib/time-preferences";
+import { getTimesheetStatusLabel } from "@/lib/timesheet-status";
 import { parseLocalDate } from "@/lib/utils";
 
 const schema = z.object({
@@ -157,6 +159,14 @@ export function TimeEntryForm({
 
   const selectedDate = form.watch("date");
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+  const selectedDateTimesheetStatus = useTimesheetStatus(
+    open ? selectedDateStr : null,
+  );
+  const selectedDateLocked = selectedDateTimesheetStatus.locked;
+  const selectedDateStatusPending = selectedDateTimesheetStatus.checking;
+  const selectedDateLockMessage = selectedDateTimesheetStatus.status
+    ? `Não é possível registrar horas porque a semana desta data já foi ${getTimesheetStatusLabel(selectedDateTimesheetStatus.status)}.`
+    : "Não é possível registrar horas nesta data.";
 
   const handleOutlookEvent = useCallback(
     (event: OutlookEvent) => {
@@ -189,6 +199,12 @@ export function TimeEntryForm({
   );
 
   async function handleSubmit(values: TimeEntryFormValues) {
+    const latestTimesheetStatus = await selectedDateTimesheetStatus.refetch();
+
+    if (latestTimesheetStatus.locked) {
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -259,10 +275,19 @@ export function TimeEntryForm({
         className="flex min-h-full flex-col"
       >
         <div className="flex-1">
+          {selectedDateLocked ? (
+            <div className="px-5 pb-0 pt-5 sm:px-6">
+              <div className="rounded-2xl border border-amber-300/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+                {selectedDateLockMessage}
+              </div>
+            </div>
+          ) : null}
+
           <TimeEntryFormFields
             form={form}
             projects={projects}
             workItem={workItem}
+            dateStatusChecking={selectedDateStatusPending}
             onWorkItemChange={setWorkItem}
             onOpenAgenda={() => setOutlookOpen(true)}
             descriptionVariants={initialValues?.descriptionVariants}
@@ -295,9 +320,18 @@ export function TimeEntryForm({
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={
+                    submitting || selectedDateLocked || selectedDateStatusPending
+                  }
                   variant="outline"
                   className="rounded-full"
+                  title={
+                    selectedDateLocked
+                      ? selectedDateLockMessage
+                      : selectedDateStatusPending
+                        ? "Verificando disponibilidade da semana selecionada."
+                        : undefined
+                  }
                   onClick={() => {
                     submitModeRef.current = "continue";
                   }}
@@ -308,8 +342,17 @@ export function TimeEntryForm({
                 </Button>
                 <Button
                   type="submit"
-                  disabled={submitting}
+                  disabled={
+                    submitting || selectedDateLocked || selectedDateStatusPending
+                  }
                   className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
+                  title={
+                    selectedDateLocked
+                      ? selectedDateLockMessage
+                      : selectedDateStatusPending
+                        ? "Verificando disponibilidade da semana selecionada."
+                        : undefined
+                  }
                   onClick={() => {
                     submitModeRef.current = "close";
                   }}
@@ -322,8 +365,17 @@ export function TimeEntryForm({
             ) : (
               <Button
                 type="submit"
-                disabled={submitting}
+                disabled={
+                  submitting || selectedDateLocked || selectedDateStatusPending
+                }
                 className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
+                title={
+                  selectedDateLocked
+                    ? selectedDateLockMessage
+                    : selectedDateStatusPending
+                      ? "Verificando disponibilidade da semana selecionada."
+                      : undefined
+                }
                 onClick={() => {
                   submitModeRef.current = "close";
                 }}

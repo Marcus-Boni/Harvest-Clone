@@ -133,13 +133,12 @@ export async function PATCH(
 
       if (
         ts.status !== "open" &&
-        ts.status !== "rejected" &&
-        ts.status !== "submitted"
+        ts.status !== "rejected"
       ) {
         return Response.json(
           {
             error:
-              "Apenas timesheets abertos, rejeitados ou submetidos podem ser submetidos.",
+              "Apenas timesheets abertos ou rejeitados podem ser submetidos.",
           },
           { status: 400 },
         );

@@ -115,12 +115,12 @@ export function OutlookMeetingDrawer({
               : outlook.status === "connected"
                 ? "Conectado"
                 : outlook.status === "empty"
-                  ? "Sem reunioes"
+                  ? "Sem reuniões"
                   : outlook.status === "needs_reconnect"
                     ? "Reconectar"
                     : outlook.status === "not_connected"
-                      ? "Nao conectado"
-                      : "Falha transitoria"}
+                      ? "Não conectado"
+                      : "Falha transitória"}
           </p>
         </div>
 

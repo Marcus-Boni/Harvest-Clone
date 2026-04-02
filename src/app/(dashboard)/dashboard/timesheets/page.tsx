@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { type Timesheet, useTimesheets } from "@/hooks/use-timesheets";
+import { isTimesheetSubmittableStatus } from "@/lib/timesheet-status";
 import { formatDuration, parseLocalDate } from "@/lib/utils";
 
 // ─── Animation variants ───────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ function SubmitButton({
 }) {
   const isEmpty = ts.totalMinutes === 0;
   const isSubmitting = submitting === ts.id;
-  const isResubmission = ts.status === "submitted";
+  const isResubmission = ts.status === "rejected";
 
   if (isEmpty) {
     return (
@@ -93,7 +94,7 @@ function SubmitButton({
               disabled
             >
               <Send className="h-3.5 w-3.5" />
-              {isResubmission ? "Re-submeter" : "Submeter"}
+              {isResubmission ? "Submeter novamente" : "Submeter"}
             </Button>
           </span>
         </TooltipTrigger>
@@ -114,10 +115,10 @@ function SubmitButton({
       <Send className="h-3.5 w-3.5" />
       {isSubmitting
         ? isResubmission
-          ? "Re-enviando…"
-          : "Enviando…"
+          ? "Submetendo novamente..."
+          : "Submetendo..."
         : isResubmission
-          ? "Re-submeter"
+          ? "Submeter novamente"
           : "Submeter"}
     </Button>
   );
@@ -171,8 +172,7 @@ function CurrentWeekCard({ ts, submitting, onSubmit }: TimesheetCardProps) {
 
           <div className="flex shrink-0 items-center gap-2">
             {(ts.status === "open" ||
-              ts.status === "rejected" ||
-              ts.status === "submitted") && (
+              ts.status === "rejected") && (
               <SubmitButton
                 ts={ts}
                 submitting={submitting}
@@ -234,7 +234,13 @@ function PendingTimesheetCard({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <SubmitButton ts={ts} submitting={submitting} onSubmit={onSubmit} />
+            {isTimesheetSubmittableStatus(ts.status) ? (
+              <SubmitButton
+                ts={ts}
+                submitting={submitting}
+                onSubmit={onSubmit}
+              />
+            ) : null}
             <Button variant="ghost" size="icon" asChild>
               <Link
                 href={`/dashboard/timesheets/${ts.id}`}

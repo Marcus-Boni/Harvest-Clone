@@ -7,6 +7,10 @@ import {
 import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
 import { db } from "@/lib/db";
 import { activeTimer, project, timeEntry } from "@/lib/db/schema";
+import {
+  assertWeeklyTimesheetDateUnlocked,
+  LockedTimesheetPeriodError,
+} from "@/lib/time-entry-locks";
 import { startTimerSchema } from "@/lib/validations/time-entry.schema";
 
 function resolveTimeZone(headerValue: string | null): string {
@@ -86,6 +90,9 @@ export async function POST(req: Request): Promise<Response> {
 
     const data = parsed.data;
     const actor = getActorContext(session.user);
+    const today = formatDateInTimeZone(new Date(), timezone);
+
+    await assertWeeklyTimesheetDateUnlocked(session.user.id, today);
     const targetProject = await db.query.project.findFirst({
       where: eq(project.id, data.projectId),
       columns: { id: true, status: true },
@@ -130,6 +137,10 @@ export async function POST(req: Request): Promise<Response> {
 
     return Response.json({ timer }, { status: 201 });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+
     console.error("[POST /api/timer]:", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
@@ -247,6 +258,10 @@ export async function DELETE(req: Request): Promise<Response> {
 
     return Response.json({ entry });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+
     console.error("[DELETE /api/timer]:", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
@@ -266,6 +281,8 @@ async function stopTimerAndSave(
 
   const durationMinutes = Math.max(1, Math.round(totalMs / 60000));
   const dateStr = formatDateInTimeZone(now, timezone);
+
+  await assertWeeklyTimesheetDateUnlocked(userId, dateStr);
 
   const entry = await db.transaction(async (tx) => {
     const entryId = crypto.randomUUID();

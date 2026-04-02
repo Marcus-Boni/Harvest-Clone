@@ -7,6 +7,10 @@ import {
 import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
 import { db } from "@/lib/db";
 import { project, projectMember, timeEntry } from "@/lib/db/schema";
+import {
+  assertWeeklyTimesheetDateUnlocked,
+  LockedTimesheetPeriodError,
+} from "@/lib/time-entry-locks";
 import { createTimeEntrySchema } from "@/lib/validations/time-entry.schema";
 
 /**
@@ -85,6 +89,8 @@ export async function POST(req: Request): Promise<Response> {
     const data = parsed.data;
     const actor = getActorContext(session.user);
 
+    await assertWeeklyTimesheetDateUnlocked(session.user.id, data.date);
+
     const targetProject = await db.query.project.findFirst({
       where: eq(project.id, data.projectId),
       columns: { id: true, status: true },
@@ -143,6 +149,10 @@ export async function POST(req: Request): Promise<Response> {
 
     return Response.json({ entry }, { status: 201 });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+
     console.error("[POST /api/time-entries]:", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }

@@ -8,6 +8,10 @@ import {
   extensionOptions,
   resolveExtensionUser,
 } from "@/lib/extension-auth";
+import {
+  assertWeeklyTimesheetDateUnlocked,
+  LockedTimesheetPeriodError,
+} from "@/lib/time-entry-locks";
 import { createTimeEntrySchema } from "@/lib/validations/time-entry.schema";
 
 export function OPTIONS() {
@@ -42,6 +46,8 @@ export async function POST(req: Request): Promise<Response> {
   const data = parsed.data;
 
   try {
+    await assertWeeklyTimesheetDateUnlocked(extUser.id, data.date);
+
     const targetProject = await db.query.project.findFirst({
       where: eq(project.id, data.projectId),
       columns: { id: true, status: true },
@@ -93,6 +99,10 @@ export async function POST(req: Request): Promise<Response> {
 
     return extensionJson({ entry }, { status: 201 });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return extensionJson({ error: error.message }, { status: 409 });
+    }
+
     console.error("[POST /api/extension/time-entries]:", error);
     return extensionJson({ error: "Internal Server Error" }, { status: 500 });
   }

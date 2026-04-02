@@ -46,6 +46,12 @@ export default function ReleasesPage() {
   const publishingRelease = releases.find((r) => r.id === publishingId) ?? null;
   const publishedReleases = releases.filter((r) => r.status === "published");
   const draftReleases = releases.filter((r) => r.status === "draft");
+  const latestPublishedRelease = publishedReleases[0] ?? null;
+  const currentVersionLabel = latestPublishedRelease
+    ? latestPublishedRelease.versionTag.startsWith("v")
+      ? latestPublishedRelease.versionTag
+      : `v${latestPublishedRelease.versionTag}`
+    : null;
 
   async function handleDelete(id: string) {
     try {
@@ -88,6 +94,11 @@ export default function ReleasesPage() {
             <h1 className="font-display text-2xl font-bold text-foreground">
               Changelog
             </h1>
+            {!isLoading && currentVersionLabel ? (
+              <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground">
+                Atual {currentVersionLabel}
+              </span>
+            ) : null}
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {isLoading
@@ -128,7 +139,12 @@ export default function ReleasesPage() {
 
       {/* Loading skeletons */}
       {isLoading ? (
-        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="space-y-4">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={itemVariants}
+          className="space-y-4"
+        >
           {[1, 2, 3].map((i) => (
             <output
               key={i}
@@ -145,7 +161,12 @@ export default function ReleasesPage() {
 
       {/* Admin drafts section */}
       {!isLoading && isAdmin && draftReleases.length > 0 ? (
-        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="space-y-3">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={itemVariants}
+          className="space-y-3"
+        >
           <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
             Rascunhos
@@ -168,7 +189,12 @@ export default function ReleasesPage() {
 
       {/* Published releases — timeline */}
       {!isLoading && publishedReleases.length > 0 ? (
-        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="space-y-3">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={itemVariants}
+          className="space-y-3"
+        >
           {isAdmin && draftReleases.length > 0 && (
             <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400" />

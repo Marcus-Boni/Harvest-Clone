@@ -8,6 +8,10 @@ import {
   extensionOptions,
   resolveExtensionUser,
 } from "@/lib/extension-auth";
+import {
+  assertWeeklyTimesheetDateUnlocked,
+  LockedTimesheetPeriodError,
+} from "@/lib/time-entry-locks";
 import { startTimerSchema } from "@/lib/validations/time-entry.schema";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +76,10 @@ export async function POST(req: Request): Promise<Response> {
       const entry = await stopTimerAndSave(extUser.id, existing);
       return extensionJson({ entry });
     } catch (error) {
+      if (error instanceof LockedTimesheetPeriodError) {
+        return extensionJson({ error: error.message }, { status: 409 });
+      }
+
       console.error("[POST /api/extension/timer stop]:", error);
       return extensionJson({ error: "Internal Server Error" }, { status: 500 });
     }
@@ -88,6 +96,11 @@ export async function POST(req: Request): Promise<Response> {
   const data = parsed.data;
 
   try {
+    await assertWeeklyTimesheetDateUnlocked(
+      extUser.id,
+      new Date().toISOString().slice(0, 10),
+    );
+
     const targetProject = await db.query.project.findFirst({
       where: eq(project.id, data.projectId),
       columns: { id: true, status: true },
@@ -143,6 +156,10 @@ export async function POST(req: Request): Promise<Response> {
 
     return extensionJson({ timer }, { status: 201 });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return extensionJson({ error: error.message }, { status: 409 });
+    }
+
     console.error("[POST /api/extension/timer start]:", error);
     return extensionJson({ error: "Internal Server Error" }, { status: 500 });
   }
@@ -159,6 +176,8 @@ async function stopTimerAndSave(
   }
   const durationMinutes = Math.max(1, Math.round(totalMs / 60000));
   const dateStr = now.toISOString().slice(0, 10);
+
+  await assertWeeklyTimesheetDateUnlocked(userId, dateStr);
 
   const entry = await db.transaction(async (tx) => {
     const entryId = crypto.randomUUID();

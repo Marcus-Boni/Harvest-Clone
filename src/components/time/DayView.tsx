@@ -36,11 +36,14 @@ import type {
   TimeSuggestion,
   TimeSuggestionCommit,
 } from "@/hooks/use-time-suggestions";
+import { getTimesheetStatusLabel } from "@/lib/timesheet-status";
 import { cn, formatDuration } from "@/lib/utils";
 
 interface DayViewProps {
   entries: TimeEntry[];
   selectedDate: Date;
+  selectedDateLocked: boolean;
+  selectedDateLockStatus?: string | null;
   onSelectedDateChange: (date: Date) => void;
   onEdit: (entry: TimeEntry) => void;
   onDelete: (id: string) => void;
@@ -72,6 +75,8 @@ const dailyTarget = 8 * 60;
 export function DayView({
   entries,
   selectedDate,
+  selectedDateLocked,
+  selectedDateLockStatus,
   onSelectedDateChange,
   onEdit,
   onDelete,
@@ -108,6 +113,9 @@ export function DayView({
     dailyTarget > 0 ? Math.min(totalMinutes / dailyTarget, 1) : 0;
   const remainingMinutes = dailyTarget - totalMinutes;
   const isComplete = remainingMinutes <= 0;
+  const lockMessage = selectedDateLockStatus
+    ? `A semana deste dia já foi ${getTimesheetStatusLabel(selectedDateLockStatus)}.`
+    : "Este dia está bloqueado para novos lançamentos.";
 
   const entriesByDate = useMemo(() => {
     const map = new Map<string, TimeEntry[]>();
@@ -184,11 +192,21 @@ export function DayView({
             size="default"
             className="rounded-full bg-brand-500 px-5 text-white hover:bg-brand-600"
             onClick={onOpenCreate}
+            disabled={selectedDateLocked}
+            title={selectedDateLocked ? lockMessage : undefined}
           >
             <Plus className="mr-2 h-4 w-4" />
             Registrar tempo
           </Button>
         </div>
+
+        {selectedDateLocked ? (
+          <div className="px-6 pt-3">
+            <div className="rounded-2xl border border-amber-300/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+              {lockMessage}
+            </div>
+          </div>
+        ) : null}
 
         {/* Week strip */}
         <div className="mt-5 px-6">
@@ -329,6 +347,8 @@ export function DayView({
         suggestions={suggestions}
         loading={suggestionsLoading}
         error={suggestionsError}
+        actionsDisabled={selectedDateLocked}
+        actionsDisabledReason={lockMessage}
         onRetry={onRetrySuggestions}
         onApply={onApplySuggestion}
         onApplyCommit={onApplySuggestionCommit}
@@ -370,6 +390,8 @@ export function DayView({
                 size="sm"
                 className="rounded-full"
                 onClick={onOpenCreate}
+                disabled={selectedDateLocked}
+                title={selectedDateLocked ? lockMessage : undefined}
               >
                 <Calendar className="mr-1.5 h-3.5 w-3.5" />
                 Ver agenda
@@ -378,6 +400,8 @@ export function DayView({
                 size="sm"
                 className="rounded-full bg-brand-500 text-white hover:bg-brand-600"
                 onClick={() => onCreateFromOutlook(pendingMeetings[0])}
+                disabled={selectedDateLocked}
+                title={selectedDateLocked ? lockMessage : undefined}
               >
                 <Zap className="mr-1.5 h-3.5 w-3.5" />
                 Importar próxima
@@ -394,7 +418,9 @@ export function DayView({
                     key={meeting.id}
                     type="button"
                     onClick={() => onCreateFromOutlook(meeting)}
+                    disabled={selectedDateLocked}
                     className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-3 py-1 text-xs text-foreground/70 transition hover:border-border hover:bg-muted/60 hover:text-foreground"
+                    title={selectedDateLocked ? lockMessage : undefined}
                   >
                     <span className="max-w-48 truncate font-medium">
                       {meeting.subject || "Sem título"}
@@ -428,6 +454,8 @@ export function DayView({
             variant="ghost"
             className="rounded-full text-xs text-muted-foreground hover:text-foreground"
             onClick={onOpenCreate}
+            disabled={selectedDateLocked}
+            title={selectedDateLocked ? lockMessage : undefined}
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
             Adicionar
@@ -453,6 +481,8 @@ export function DayView({
                 size="sm"
                 className="mt-1 rounded-full"
                 onClick={onOpenCreate}
+                disabled={selectedDateLocked}
+                title={selectedDateLocked ? lockMessage : undefined}
               >
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                 Criar primeiro lançamento

@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CalendarIcon } from "lucide-react";
+import { CalendarClock, CalendarIcon, Loader2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { DurationInput } from "@/components/time/DurationInput";
 import { ProjectCombobox } from "@/components/time/ProjectCombobox";
@@ -48,6 +48,7 @@ interface TimeEntryFormFieldsProps {
   form: UseFormReturn<TimeEntryFormValues>;
   projects: Project[];
   workItem: { id: number; title: string } | null;
+  dateStatusChecking?: boolean;
   onWorkItemChange: (value: { id: number; title: string } | null) => void;
   onOpenAgenda?: () => void;
   descriptionVariants?: {
@@ -63,6 +64,7 @@ export function TimeEntryFormFields({
   form,
   projects,
   workItem,
+  dateStatusChecking = false,
   onWorkItemChange,
   onOpenAgenda,
   descriptionVariants,
@@ -203,12 +205,24 @@ export function TimeEntryFormFields({
                 type="button"
                 variant="outline"
                 className={cn(
-                  "h-9 w-full justify-start rounded-md bg-background/80 text-left font-normal",
+                  "h-9 w-full justify-start gap-2 rounded-md bg-background/80 text-left font-normal",
                   !selectedDate && "text-muted-foreground",
                 )}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+                <CalendarIcon className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+                </span>
+                <span className="ml-auto inline-flex h-4 w-4 items-center justify-center text-muted-foreground">
+                  {dateStatusChecking ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                </span>
+                <span className="sr-only" aria-live="polite">
+                  {dateStatusChecking
+                    ? "Verificando disponibilidade da semana selecionada."
+                    : ""}
+                </span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">

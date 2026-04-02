@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { TimeEntry } from "@/hooks/use-time-entries";
+import { isTimesheetEditableStatus } from "@/lib/timesheet-status";
 import { cn, formatDecimalHours } from "@/lib/utils";
 
 interface TimeEntryCardProps {
@@ -25,9 +26,7 @@ export function TimeEntryCard({
   onDelete,
   onDuplicate,
 }: TimeEntryCardProps) {
-  const isEditable =
-    !entry.timesheet ||
-    ["open", "rejected", "submitted"].includes(entry.timesheet.status);
+  const isEditable = isTimesheetEditableStatus(entry.timesheet?.status);
 
   return (
     <div

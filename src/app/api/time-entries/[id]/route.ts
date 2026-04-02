@@ -1,8 +1,16 @@
 import { and, eq, isNull } from "drizzle-orm";
+import {
+  canAccessProject,
+  getActorContext,
+} from "@/lib/access-control";
 import { auth } from "@/lib/auth";
 import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
 import { db } from "@/lib/db";
-import { timeEntry } from "@/lib/db/schema";
+import { project, projectMember, timeEntry } from "@/lib/db/schema";
+import {
+  assertWeeklyTimesheetDateUnlocked,
+  LockedTimesheetPeriodError,
+} from "@/lib/time-entry-locks";
 import { updateTimeEntrySchema } from "@/lib/validations/time-entry.schema";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -64,6 +72,7 @@ export async function PATCH(
   const { id } = await context.params;
 
   try {
+    const actor = getActorContext(session.user);
     const existing = await db.query.timeEntry.findFirst({
       where: and(
         eq(timeEntry.id, id),
@@ -79,8 +88,6 @@ export async function PATCH(
       );
     }
 
-    // Removed draft status check since status field is removed
-
     const body = await req.json();
     const parsed = updateTimeEntrySchema.safeParse(body);
 
@@ -92,6 +99,51 @@ export async function PATCH(
     }
 
     const data = parsed.data;
+    const nextDate = data.date ?? existing.date;
+    const nextProjectId = data.projectId ?? existing.projectId;
+
+    await assertWeeklyTimesheetDateUnlocked(session.user.id, existing.date);
+    if (nextDate !== existing.date) {
+      await assertWeeklyTimesheetDateUnlocked(session.user.id, nextDate);
+    }
+
+    if (nextProjectId !== existing.projectId) {
+      const targetProject = await db.query.project.findFirst({
+        where: eq(project.id, nextProjectId),
+        columns: { id: true, status: true },
+      });
+
+      if (!targetProject || targetProject.status !== "active") {
+        return Response.json(
+          { error: "Projeto não encontrado." },
+          { status: 404 },
+        );
+      }
+
+      if (!(await canAccessProject(actor, nextProjectId))) {
+        return Response.json(
+          { error: "Você não pode lançar horas neste projeto." },
+          { status: 403 },
+        );
+      }
+
+      if (actor.role === "member") {
+        const membership = await db.query.projectMember.findFirst({
+          where: and(
+            eq(projectMember.projectId, nextProjectId),
+            eq(projectMember.userId, session.user.id),
+          ),
+        });
+
+        if (!membership) {
+          return Response.json(
+            { error: "Você não é membro deste projeto." },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     const workItemChanged =
       data.azureWorkItemId !== undefined &&
       data.azureWorkItemId !== existing.azureWorkItemId;
@@ -126,6 +178,10 @@ export async function PATCH(
 
     return Response.json({ entry: updated });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+
     console.error("[PATCH /api/time-entries/:id]:", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }
@@ -161,7 +217,7 @@ export async function DELETE(
       );
     }
 
-    // Removed draft status check since status field is removed
+    await assertWeeklyTimesheetDateUnlocked(session.user.id, existing.date);
 
     await db
       .update(timeEntry)
@@ -172,6 +228,10 @@ export async function DELETE(
 
     return Response.json({ success: true });
   } catch (error) {
+    if (error instanceof LockedTimesheetPeriodError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
+
     console.error("[DELETE /api/time-entries/:id]:", error);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { Hourglass } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -17,11 +18,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useTimesheetStatus } from "@/hooks/use-timesheet-status";
 import {
   dispatchTimeEntriesUpdated,
   dispatchTimerUpdated,
 } from "@/lib/time-events";
 import { getTimePreferences, saveTimePreference } from "@/lib/time-preferences";
+import { getTimesheetStatusLabel } from "@/lib/timesheet-status";
 import { useUIStore } from "@/stores/ui.store";
 
 interface Project {
@@ -45,6 +48,14 @@ interface ActiveTimerSummary {
 
 export function QuickTimerDialog() {
   const { quickTimerOpen, closeQuickTimer } = useUIStore();
+  const todayDate = format(new Date(), "yyyy-MM-dd");
+  const todayTimesheetStatus = useTimesheetStatus(
+    quickTimerOpen ? todayDate : null,
+  );
+  const todayLocked = todayTimesheetStatus.locked;
+  const todayLockMessage = todayTimesheetStatus.status
+    ? `Não é possível iniciar um timer porque a semana de hoje já foi ${getTimesheetStatusLabel(todayTimesheetStatus.status)}.`
+    : "Não é possível iniciar um timer hoje.";
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState("");
@@ -147,6 +158,11 @@ export function QuickTimerDialog() {
   }, [quickTimerOpen]);
 
   const handleStartTimer = async () => {
+    if (todayLocked) {
+      toast.error(todayLockMessage);
+      return;
+    }
+
     if (!projectId) {
       toast.error("Selecione um projeto para iniciar o timer.");
       return;
@@ -179,7 +195,7 @@ export function QuickTimerDialog() {
 
       if (!response.ok) {
         const error = (await response.json()) as { error?: string };
-        throw new Error(error.error ?? "Nao foi possivel iniciar o timer.");
+        throw new Error(error.error ?? "Não foi possível iniciar o timer.");
       }
 
       saveTimePreference("lastProjectId", projectId);
@@ -199,7 +215,7 @@ export function QuickTimerDialog() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel iniciar o timer.",
+          : "Não foi possível iniciar o timer.",
       );
     } finally {
       setSubmitting(false);
@@ -223,6 +239,13 @@ export function QuickTimerDialog() {
         </DialogHeader>
 
         <div className="space-y-4">
+          {todayLocked ? (
+            <div className="rounded-lg border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              <p className="font-medium">Semana bloqueada para lançamentos.</p>
+              <p>{todayLockMessage}</p>
+            </div>
+          ) : null}
+
           {activeTimer ? (
             <div className="rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-sm text-foreground">
               <p className="font-medium">Ja existe um timer em andamento.</p>
@@ -308,8 +331,13 @@ export function QuickTimerDialog() {
               void handleStartTimer();
             }}
             disabled={
-              loading || submitting || !projectId || !description.trim()
+              loading ||
+              submitting ||
+              todayLocked ||
+              !projectId ||
+              !description.trim()
             }
+            title={todayLocked ? todayLockMessage : undefined}
           >
             {submitting ? "Iniciando..." : "Iniciar timer"}
           </Button>
