@@ -1,10 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Users } from "lucide-react";
+import { Bell, Calendar, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import InviteUserDialog from "@/components/people/InviteUserDialog";
 import PersonCard, { type PersonData } from "@/components/people/PersonCard";
+import ReminderBulkModal from "@/components/people/ReminderBulkModal";
+import ReminderScheduleDrawer from "@/components/people/ReminderScheduleDrawer";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
@@ -42,6 +45,8 @@ export default function PeoplePage() {
   const [people, setPeople] = useState<PersonData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isReminderBulkOpen, setIsReminderBulkOpen] = useState(false);
+  const [isScheduleDrawerOpen, setIsScheduleDrawerOpen] = useState(false);
 
   const fetchPeople = useCallback(async () => {
     setIsLoading(true);
@@ -78,7 +83,7 @@ export default function PeoplePage() {
       {/* Header */}
       <motion.div
         variants={itemVariants}
-        className="flex items-center justify-between"
+        className="flex items-center justify-between gap-4"
       >
         <div>
           <h1 className="font-display text-2xl font-bold text-foreground">
@@ -88,7 +93,31 @@ export default function PeoplePage() {
             Gerencie os colaboradores da sua organização.
           </p>
         </div>
-        {canInvite && <InviteUserDialog sessionRole={sessionRole} />}
+        {canInvite && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setIsScheduleDrawerOpen(true)}
+              aria-label="Configurar agendamento de lembretes"
+            >
+              <Calendar className="h-4 w-4" aria-hidden="true" />
+              Agendamento
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setIsReminderBulkOpen(true)}
+              aria-label="Enviar lembrete para toda a equipe"
+            >
+              <Bell className="h-4 w-4" aria-hidden="true" />
+              Lembrar equipe
+            </Button>
+            <InviteUserDialog sessionRole={sessionRole} />
+          </div>
+        )}
       </motion.div>
 
       {/* Loading state */}
@@ -159,6 +188,21 @@ export default function PeoplePage() {
             />
           ))}
         </div>
+      )}
+
+      {canInvite && (
+        <>
+          <ReminderBulkModal
+            open={isReminderBulkOpen}
+            onOpenChange={setIsReminderBulkOpen}
+            scope={sessionRole === "admin" ? "all" : "direct_reports"}
+          />
+          <ReminderScheduleDrawer
+            open={isScheduleDrawerOpen}
+            onOpenChange={setIsScheduleDrawerOpen}
+            sessionRole={sessionRole}
+          />
+        </>
       )}
     </motion.div>
   );
