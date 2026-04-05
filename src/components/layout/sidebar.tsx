@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3,
   CheckSquare,
   ChevronLeft,
   ChevronRight,
@@ -51,7 +50,6 @@ const baseNavigation: NavigationItem[] = [
   { name: "Registrar Tempo", href: "/dashboard/time", icon: Clock },
   { name: "Timesheets", href: "/dashboard/timesheets", icon: Layers },
   { name: "Projetos", href: "/dashboard/projects", icon: Folder },
-  { name: "Relatórios", href: "/dashboard/reports", icon: BarChart3 },
   {
     name: "Integrações",
     href: "/dashboard/integrations",

@@ -13,7 +13,6 @@ const segmentLabels: Record<string, string> = {
   approvals: "Aprovações",
   calendar: "Calendário",
   projects: "Projetos",
-  reports: "Relatórios",
   team: "Equipe",
   export: "Exportar",
   people: "Pessoas",

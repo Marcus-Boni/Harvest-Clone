@@ -23,12 +23,18 @@ interface ProjectOption {
   color: string;
 }
 
+interface EmptyOption {
+  label: string;
+  value: string;
+}
+
 interface ProjectComboboxProps {
   projects: ProjectOption[];
   value: string;
   onChange: (projectId: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  emptyOption?: EmptyOption;
   "aria-invalid"?: boolean;
 }
 
@@ -38,6 +44,7 @@ export function ProjectCombobox({
   onChange,
   placeholder = "Selecione um projeto",
   disabled = false,
+  emptyOption,
   "aria-invalid": ariaInvalid,
 }: ProjectComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -50,9 +57,10 @@ export function ProjectCombobox({
     [projects],
   );
 
-  const selectedProject = sortedProjects.find(
-    (project) => project.id === value,
-  );
+  const selectedProject =
+    value === emptyOption?.value
+      ? { id: emptyOption.value, name: emptyOption.label, color: "" }
+      : sortedProjects.find((project) => project.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -63,7 +71,7 @@ export function ProjectCombobox({
           role="combobox"
           aria-expanded={open}
           aria-invalid={ariaInvalid}
-          disabled={disabled || projects.length === 0}
+          disabled={disabled || (!emptyOption && projects.length === 0)}
           className={cn(
             "h-9 w-full justify-between rounded-md bg-background/80 font-normal",
             !selectedProject && "text-muted-foreground",
@@ -71,10 +79,12 @@ export function ProjectCombobox({
         >
           {selectedProject ? (
             <span className="flex min-w-0 items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: selectedProject.color }}
-              />
+              {selectedProject.color ? (
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: selectedProject.color }}
+                />
+              ) : null}
               <span className="truncate">{selectedProject.name}</span>
             </span>
           ) : (
@@ -96,6 +106,24 @@ export function ProjectCombobox({
                 ? "Nenhum projeto ativo disponível"
                 : "Nenhum projeto encontrado"}
             </CommandEmpty>
+            {emptyOption ? (
+              <CommandItem
+                key={emptyOption.value}
+                value={emptyOption.label}
+                onSelect={() => {
+                  onChange(emptyOption.value);
+                  setOpen(false);
+                }}
+              >
+                <Check
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    emptyOption.value === value ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <span className="truncate">{emptyOption.label}</span>
+              </CommandItem>
+            ) : null}
             {sortedProjects.map((project) => (
               <CommandItem
                 key={project.id}
