@@ -36,6 +36,17 @@ export const user = pgTable("user", {
   hourlyRate: integer("hourly_rate"),
   azureId: text("azure_id"),
   weeklyCapacity: integer("weekly_capacity").default(40).notNull(),
+  timeDefaultView: text("time_default_view").default("week").notNull(),
+  timeDefaultDuration: integer("time_default_duration").default(60).notNull(),
+  timeSubmitMode: text("time_submit_mode").default("close").notNull(),
+  timeDefaultBillable: boolean("time_default_billable").default(true).notNull(),
+  timeAssistantEnabled: boolean("time_assistant_enabled")
+    .default(true)
+    .notNull(),
+  timeOutlookDefaultOpen: boolean("time_outlook_default_open")
+    .default(false)
+    .notNull(),
+  timeShowWeekends: boolean("time_show_weekends").default(true).notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   /** Token for the Azure DevOps browser extension (Bearer auth) */
   extensionToken: text("extension_token").unique(),

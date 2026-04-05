@@ -1,5 +1,7 @@
 /** ARCH: User roles determine access levels across the application */
 export type UserRole = "member" | "manager" | "admin";
+export type TimeViewPreference = "day" | "week" | "month";
+export type TimeSubmitModePreference = "close" | "continue";
 
 export interface User {
   id: string;
@@ -15,6 +17,20 @@ export interface User {
   azureId?: string;
   /** Expected weekly hours (default: 40) */
   weeklyCapacity: number;
+  /** Preferred default time workspace view */
+  timeDefaultView: TimeViewPreference;
+  /** Preferred default duration for new entries, in minutes */
+  timeDefaultDuration: number;
+  /** Preferred behavior after saving a time entry */
+  timeSubmitMode: TimeSubmitModePreference;
+  /** Preferred billable flag for new entries */
+  timeDefaultBillable: boolean;
+  /** Whether assistant suggestions should be enabled in time workspace */
+  timeAssistantEnabled: boolean;
+  /** Whether Outlook drawer should open by default */
+  timeOutlookDefaultOpen: boolean;
+  /** Whether weekends should be visible in time views */
+  timeShowWeekends: boolean;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -60,6 +60,11 @@ const baseNavigation: NavigationItem[] = [
     href: "/dashboard/suggestions",
     icon: Lightbulb,
   },
+  {
+    name: "ConfiguraÃ§Ãµes",
+    href: "/dashboard/settings",
+    icon: Settings,
+  },
 ];
 
 const managementNav = [
@@ -185,6 +190,10 @@ export function Sidebar() {
         }
       : item,
   );
+  const appNavigation: NavigationItem[] = [
+    ...navigation.filter((item) => item.href !== "/dashboard/settings"),
+    { name: "Configurações", href: "/dashboard/settings", icon: Settings },
+  ];
 
   return (
     <TooltipProvider>
@@ -272,7 +281,7 @@ export function Sidebar() {
 
             <nav className="px-2" aria-label="Navegação principal">
               <ul className="space-y-1">
-                {navigation.map((item) => {
+                {appNavigation.map((item) => {
                   const isActive = pathname === item.href;
                   const linkContent = (
                     <Link
@@ -341,49 +350,53 @@ export function Sidebar() {
                 ) : null}
                 <nav className="mt-1 px-2" aria-label="Navegação de gestão">
                   <ul className="space-y-1">
-                    {managementNav.map((item) => {
-                      const isActive =
-                        pathname === item.href ||
-                        pathname.startsWith(`${item.href}/`);
-                      const linkContent = (
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                            isActive
-                              ? "bg-brand-500/10 text-brand-500"
-                              : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                            sidebarCollapsed && "justify-center px-2",
-                          )}
-                          aria-current={isActive ? "page" : undefined}
-                        >
-                          <item.icon
+                    {managementNav
+                      .filter((item) => item.href !== "/dashboard/settings")
+                      .map((item) => {
+                        const isActive =
+                          pathname === item.href ||
+                          pathname.startsWith(`${item.href}/`);
+                        const linkContent = (
+                          <Link
+                            href={item.href}
                             className={cn(
-                              "h-5 w-5 shrink-0",
-                              isActive ? "text-brand-500" : "",
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                              isActive
+                                ? "bg-brand-500/10 text-brand-500"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                              sidebarCollapsed && "justify-center px-2",
                             )}
-                          />
-                          {!sidebarCollapsed ? <span>{item.name}</span> : null}
-                        </Link>
-                      );
+                            aria-current={isActive ? "page" : undefined}
+                          >
+                            <item.icon
+                              className={cn(
+                                "h-5 w-5 shrink-0",
+                                isActive ? "text-brand-500" : "",
+                              )}
+                            />
+                            {!sidebarCollapsed ? (
+                              <span>{item.name}</span>
+                            ) : null}
+                          </Link>
+                        );
 
-                      return (
-                        <li key={item.href}>
-                          {sidebarCollapsed ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                {linkContent}
-                              </TooltipTrigger>
-                              <TooltipContent side="right">
-                                {item.name}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            linkContent
-                          )}
-                        </li>
-                      );
-                    })}
+                        return (
+                          <li key={item.href}>
+                            {sidebarCollapsed ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {linkContent}
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                  {item.name}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              linkContent
+                            )}
+                          </li>
+                        );
+                      })}
                   </ul>
                 </nav>
               </>

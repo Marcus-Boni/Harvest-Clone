@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const MANAGER_ROUTES = ["/dashboard/people", "/dashboard/settings"];
+const MANAGER_ROUTES = ["/dashboard/people"];
 const PUBLIC_AUTH_ROUTES = ["/login", "/accept-invite"];
 
 function isManagerRoute(pathname: string): boolean {
@@ -88,7 +88,11 @@ export default async function middleware(
         forwardedHost: forwardedHostHeader,
         forwardedProto: forwardedProtoHeader,
       });
-      if (response.status === 401 || response.status === 403 || response.status === 404) {
+      if (
+        response.status === 401 ||
+        response.status === 403 ||
+        response.status === 404
+      ) {
         session = null;
       } else {
         session = hasAuthCookie ? { user: {} } : null;

@@ -7,6 +7,16 @@ import type { Project } from "@/types/project";
 import type { TimeEntry } from "@/types/time-entry";
 import type { User } from "@/types/user";
 
+const DEFAULT_USER_PREFERENCES = {
+  timeAssistantEnabled: true,
+  timeDefaultBillable: true,
+  timeDefaultDuration: 60,
+  timeDefaultView: "week" as const,
+  timeOutlookDefaultOpen: false,
+  timeShowWeekends: true,
+  timeSubmitMode: "close" as const,
+};
+
 export const MOCK_CURRENT_USER: User = {
   id: "user-1",
   email: "[EMAIL_ADDRESS]",
@@ -17,6 +27,7 @@ export const MOCK_CURRENT_USER: User = {
   managerId: undefined,
   hourlyRate: 150,
   weeklyCapacity: 40,
+  ...DEFAULT_USER_PREFERENCES,
   isActive: true,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2025-03-01"),
@@ -32,6 +43,7 @@ export const MOCK_USERS: User[] = [
     department: "Engenharia",
     managerId: "user-1",
     weeklyCapacity: 40,
+    ...DEFAULT_USER_PREFERENCES,
     isActive: true,
     createdAt: new Date("2024-02-01"),
     updatedAt: new Date("2025-03-01"),
@@ -44,6 +56,7 @@ export const MOCK_USERS: User[] = [
     department: "Design",
     managerId: "user-1",
     weeklyCapacity: 40,
+    ...DEFAULT_USER_PREFERENCES,
     isActive: true,
     createdAt: new Date("2024-03-01"),
     updatedAt: new Date("2025-03-01"),
@@ -55,6 +68,7 @@ export const MOCK_USERS: User[] = [
     role: "admin",
     department: "Engenharia",
     weeklyCapacity: 40,
+    ...DEFAULT_USER_PREFERENCES,
     isActive: true,
     createdAt: new Date("2024-01-15"),
     updatedAt: new Date("2025-03-01"),
@@ -67,6 +81,7 @@ export const MOCK_USERS: User[] = [
     department: "Backend",
     managerId: "user-1",
     weeklyCapacity: 40,
+    ...DEFAULT_USER_PREFERENCES,
     isActive: true,
     createdAt: new Date("2024-06-01"),
     updatedAt: new Date("2025-03-01"),
@@ -140,7 +155,6 @@ const today = new Date();
 const todayStr = today.toISOString().split("T")[0];
 const yesterday = new Date(today);
 yesterday.setDate(yesterday.getDate() - 1);
-const yesterdayStr = yesterday.toISOString().split("T")[0];
 
 export const MOCK_TIME_ENTRIES: TimeEntry[] = [
   {

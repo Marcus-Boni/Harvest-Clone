@@ -51,8 +51,6 @@ export function Header() {
   const user = isPending
     ? null
     : ((session?.user as unknown as UserType) ?? null);
-  const isManager =
-    !isPending && (user?.role === "manager" || user?.role === "admin");
   const currentUser = user;
   const router = useRouter();
   const pathname = usePathname();
@@ -280,17 +278,15 @@ export function Header() {
                   Perfil
                 </Link>
               </DropdownMenuItem>
-              {isManager && (
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/dashboard/settings"
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Configurações
-                  </Link>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/settings"
+                  className="flex cursor-pointer items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configurações
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="flex cursor-pointer items-center gap-2 text-destructive focus:text-destructive"

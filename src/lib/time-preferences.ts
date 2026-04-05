@@ -1,7 +1,10 @@
 "use client";
 
-export type TimeViewPreference = "day" | "week" | "month";
-export type TimeSubmitModePreference = "close" | "continue";
+import type {
+  TimeSubmitModePreference,
+  TimeViewPreference,
+  User,
+} from "@/types/user";
 
 export interface TimePreferences {
   defaultView: TimeViewPreference;
@@ -16,7 +19,7 @@ export interface TimePreferences {
 
 const STORAGE_KEY = "harvest:time-preferences";
 
-const DEFAULT_PREFERENCES: TimePreferences = {
+export const DEFAULT_TIME_PREFERENCES: TimePreferences = {
   defaultView: "week",
   lastProjectId: null,
   defaultBillable: true,
@@ -29,23 +32,23 @@ const DEFAULT_PREFERENCES: TimePreferences = {
 
 export function getTimePreferences(): TimePreferences {
   if (typeof window === "undefined") {
-    return DEFAULT_PREFERENCES;
+    return DEFAULT_TIME_PREFERENCES;
   }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return DEFAULT_PREFERENCES;
+      return DEFAULT_TIME_PREFERENCES;
     }
 
     const parsed = JSON.parse(raw) as Partial<TimePreferences>;
 
     return {
-      ...DEFAULT_PREFERENCES,
+      ...DEFAULT_TIME_PREFERENCES,
       ...parsed,
     };
   } catch {
-    return DEFAULT_PREFERENCES;
+    return DEFAULT_TIME_PREFERENCES;
   }
 }
 
@@ -53,6 +56,12 @@ export function saveTimePreference<K extends keyof TimePreferences>(
   key: K,
   value: TimePreferences[K],
 ): void {
+  saveTimePreferences({
+    [key]: value,
+  } as Partial<TimePreferences>);
+}
+
+export function saveTimePreferences(patch: Partial<TimePreferences>): void {
   if (typeof window === "undefined") {
     return;
   }
@@ -63,10 +72,33 @@ export function saveTimePreference<K extends keyof TimePreferences>(
       STORAGE_KEY,
       JSON.stringify({
         ...current,
-        [key]: value,
+        ...patch,
       }),
     );
   } catch {
     // Ignore unavailable or blocked storage.
   }
+}
+
+export function getTimePreferencesFromUser(
+  user: Pick<
+    User,
+    | "timeDefaultBillable"
+    | "timeDefaultDuration"
+    | "timeDefaultView"
+    | "timeSubmitMode"
+    | "timeAssistantEnabled"
+    | "timeOutlookDefaultOpen"
+    | "timeShowWeekends"
+  >,
+): Partial<TimePreferences> {
+  return {
+    assistantEnabled: user.timeAssistantEnabled,
+    defaultBillable: user.timeDefaultBillable,
+    defaultDuration: user.timeDefaultDuration,
+    defaultView: user.timeDefaultView,
+    outlookDrawerDefaultOpen: user.timeOutlookDefaultOpen,
+    showWeekends: user.timeShowWeekends,
+    submitMode: user.timeSubmitMode,
+  };
 }

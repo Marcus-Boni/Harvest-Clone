@@ -50,6 +50,41 @@ export const auth = betterAuth({
         required: true,
         defaultValue: 40,
       },
+      timeDefaultView: {
+        type: "string",
+        required: true,
+        defaultValue: "week",
+      },
+      timeDefaultDuration: {
+        type: "number",
+        required: true,
+        defaultValue: 60,
+      },
+      timeSubmitMode: {
+        type: "string",
+        required: true,
+        defaultValue: "close",
+      },
+      timeDefaultBillable: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+      },
+      timeAssistantEnabled: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+      },
+      timeOutlookDefaultOpen: {
+        type: "boolean",
+        required: true,
+        defaultValue: false,
+      },
+      timeShowWeekends: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+      },
       isActive: {
         type: "boolean",
         required: true,

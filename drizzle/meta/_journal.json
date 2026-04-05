@@ -78,6 +78,13 @@
       "when": 1775138051125,
       "tag": "0010_spooky_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1775409718886,
+      "tag": "0011_tan_brood",
+      "breakpoints": true
     }
   ]
 }

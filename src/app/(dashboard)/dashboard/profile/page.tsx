@@ -1,16 +1,27 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import {
+  ArrowRight,
   AtSign,
   Building2,
+  CalendarClock,
   Camera,
-  Clock,
+  CheckCircle2,
+  type Clock3,
+  Copy,
+  KeyRound,
   Loader2,
+  MonitorCog,
   Save,
   ShieldCheck,
+  TimerReset,
+  Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -26,6 +37,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { compressImage } from "@/lib/image-utils";
 import { getInitials, isBase64Image, resolveUserImage } from "@/lib/utils";
 import {
+  type UpdateProfileFormInput,
   type UpdateProfileInput,
   updateProfileSchema,
 } from "@/lib/validations/profile.schema";
@@ -51,11 +63,67 @@ const roleLabel: Record<string, string> = {
   member: "Membro",
 };
 
+const viewLabel: Record<UserType["timeDefaultView"], string> = {
+  day: "Dia",
+  month: "Mês",
+  week: "Semana",
+};
+
+const submitModeLabel: Record<UserType["timeSubmitMode"], string> = {
+  close: "Fechar após salvar",
+  continue: "Continuar registrando",
+};
+
+function OverviewMetric({
+  icon: Icon,
+  label,
+  value,
+  description,
+}: {
+  className?: string;
+  icon: typeof Clock3;
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-border/60 bg-background/82 p-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-white/8 dark:bg-black/28 dark:shadow-none`}
+    >
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4 text-brand-500" />
+        <span className="text-xs font-medium uppercase tracking-wide">
+          {label}
+        </span>
+      </div>
+      <p className="mt-3 text-xl font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function PreferenceRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/45 px-4 py-3 text-sm dark:border-border/50 dark:bg-background/60">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { data: session, refetch } = useSession();
   const user = session?.user as unknown as UserType;
 
   const [isUploading, setIsUploading] = useState(false);
+  const [tokenStatus, setTokenStatus] = useState<{
+    hasToken: boolean;
+    tokenPreview: string | null;
+  } | null>(null);
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const [isLoadingToken, setIsLoadingToken] = useState(true);
+  const [isGeneratingToken, setIsGeneratingToken] = useState(false);
+  const [isRevokingToken, setIsRevokingToken] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isSaving, updateProfile } = useUpdateProfile();
@@ -65,37 +133,68 @@ export default function ProfilePage() {
     handleSubmit,
     reset,
     formState: { errors, isDirty },
-  } = useForm<UpdateProfileInput>({
+  } = useForm<UpdateProfileFormInput, unknown, UpdateProfileInput>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
-      name: "",
       department: "",
+      name: "",
       weeklyCapacity: 40,
     },
   });
 
-  // Popula o form quando a sessão carrega ou muda
   useEffect(() => {
-    if (user) {
-      reset({
-        name: user.name ?? "",
-        department: user.department ?? "",
-        weeklyCapacity: user.weeklyCapacity ?? 40,
-      });
+    if (!user) {
+      return;
     }
-  }, [user, reset]);
 
-  if (!user) return null;
+    reset({
+      department: user.department ?? "",
+      name: user.name ?? "",
+      weeklyCapacity: user.weeklyCapacity ?? 40,
+    });
+  }, [reset, user]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    async function fetchTokenStatus() {
+      try {
+        const res = await fetch("/api/user/extension-token");
+        if (!res.ok) {
+          return;
+        }
+
+        const data = (await res.json()) as {
+          hasToken: boolean;
+          tokenPreview: string | null;
+        };
+        setTokenStatus(data);
+      } catch (error) {
+        console.error("[ProfilePage] fetchTokenStatus:", error);
+      } finally {
+        setIsLoadingToken(false);
+      }
+    }
+
+    void fetchTokenStatus();
+  }, []);
+
+  if (!user) {
+    return null;
+  }
+
+  const avatarSrc = resolveUserImage(user.image);
+  const initials = getInitials(user.name);
+  const createdAt = new Date(user.createdAt);
+  const lastUpdated = new Date(user.updatedAt);
 
   function handleAvatarClick() {
     fileInputRef.current?.click();
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -110,14 +209,16 @@ export default function ProfilePage() {
         return;
       }
 
-      toast.success("Foto de perfil atualizada com sucesso!");
+      toast.success("Foto de perfil atualizada com sucesso.");
       await refetch();
-    } catch (err: unknown) {
-      console.error("[ProfilePage] handleFileChange:", err);
+    } catch (error) {
+      console.error("[ProfilePage] handleFileChange:", error);
       toast.error("Erro ao processar a imagem. Tente novamente.");
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }
 
@@ -128,103 +229,192 @@ export default function ProfilePage() {
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  async function handleGenerateToken() {
+    setIsGeneratingToken(true);
+    try {
+      const res = await fetch("/api/user/extension-token", { method: "POST" });
+      const data = (await res.json()) as { error?: string; token?: string };
 
-  const avatarSrc = resolveUserImage(user.image);
-  const initials = getInitials(user.name);
+      if (!res.ok || !data.token) {
+        throw new Error(data.error || "Não foi possível gerar o token.");
+      }
+
+      setNewToken(data.token);
+      setTokenStatus({
+        hasToken: true,
+        tokenPreview: `...${data.token.slice(-6)}`,
+      });
+      toast.success(
+        "Token gerado. Copie agora, ele não será exibido novamente.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao gerar token.",
+      );
+    } finally {
+      setIsGeneratingToken(false);
+    }
+  }
+
+  async function handleRevokeToken() {
+    setIsRevokingToken(true);
+    try {
+      const res = await fetch("/api/user/extension-token", {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Não foi possível revogar o token.");
+      }
+
+      setNewToken(null);
+      setTokenStatus({ hasToken: false, tokenPreview: null });
+      toast.success("Token revogado com sucesso.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao revogar token.",
+      );
+    } finally {
+      setIsRevokingToken(false);
+    }
+  }
+
+  async function handleCopyToken(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Token copiado.");
+    } catch {
+      toast.error("Não foi possível copiar o token.");
+    }
+  }
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="max-w-2xl space-y-8"
+      className="space-y-8"
     >
-      {/* Page Header */}
-      <motion.div variants={itemVariants}>
-        <h1 className="font-display text-2xl font-bold text-foreground">
-          Meu Perfil
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Informações da sua conta e dados pessoais.
-        </p>
+      <motion.div
+        variants={itemVariants}
+        className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+      >
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground">
+            Meu Perfil
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Centralize seus dados pessoais, acompanhe como sua rotina está
+            configurada e gerencie seus recursos individuais da plataforma.
+          </p>
+        </div>
+        <Button asChild variant="outline" className="gap-2 self-start">
+          <Link href="/dashboard/settings">
+            Ajustar preferências
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
       </motion.div>
 
-      {/* Avatar + Identity */}
       <motion.div variants={itemVariants}>
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              <div className="relative group shrink-0 h-20 w-20">
-                <Avatar
-                  className={`h-20 w-20 border-2 border-border/50 transition-opacity ${isUploading ? "opacity-50" : "group-hover:opacity-80"}`}
-                >
-                  {(() => {
-                    return (
-                      <>
-                        {avatarSrc !== null && isBase64Image(avatarSrc) ? (
-                          // biome-ignore lint/performance/noImgElement: base64 not supported by next/image
-                          <img
-                            src={avatarSrc}
-                            alt={`Foto de perfil de ${user.name}`}
-                            className="aspect-square size-full object-cover rounded-full"
-                          />
-                        ) : avatarSrc !== null ? (
-                          <AvatarImage
-                            src={avatarSrc}
-                            alt={`Foto de perfil de ${user.name}`}
-                          />
-                        ) : null}
-                        <AvatarFallback className="bg-brand-500/10 text-2xl font-semibold text-brand-500">
-                          {initials}
-                        </AvatarFallback>
-                      </>
-                    );
-                  })()}
-                </Avatar>
-                <button
-                  type="button"
-                  onClick={handleAvatarClick}
-                  disabled={isUploading}
-                  className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed cursor-pointer"
-                  aria-label="Alterar foto de perfil"
-                >
-                  {isUploading ? (
-                    <Loader2 className="h-6 w-6 text-white animate-spin" />
-                  ) : (
-                    <Camera className="h-6 w-6 text-white" />
-                  )}
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  tabIndex={-1}
-                />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <p className="font-display text-xl font-bold text-foreground">
-                  {user.name}
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {user.email}
-                </p>
-                <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 bg-brand-500/10 text-brand-400"
+        <Card className="overflow-hidden border-border/50 bg-transparent py-0 backdrop-blur gap-0">
+          <CardContent className="p-0">
+            <div className="bg-gradient-to-r from-brand-500/18 via-brand-500/8 to-card px-6 py-6 dark:from-brand-500/22 dark:via-brand-500/10">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+                <div className="relative h-24 w-24 shrink-0">
+                  <Avatar
+                    className={`h-24 w-24 border-2 border-white/10 shadow-sm transition-opacity ${isUploading ? "opacity-60" : ""}`}
                   >
-                    <ShieldCheck className="h-3 w-3" />
-                    {roleLabel[user.role] ?? user.role}
-                  </Badge>
-                  {user.department && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Building2 className="h-3 w-3" />
-                      {user.department}
+                    {avatarSrc !== null && isBase64Image(avatarSrc) ? (
+                      // biome-ignore lint/performance/noImgElement: base64 avatar is not supported by next/image
+                      <img
+                        src={avatarSrc}
+                        alt={`Foto de perfil de ${user.name}`}
+                        className="aspect-square size-full rounded-full object-cover"
+                      />
+                    ) : avatarSrc !== null ? (
+                      <AvatarImage
+                        src={avatarSrc}
+                        alt={`Foto de perfil de ${user.name}`}
+                      />
+                    ) : null}
+                    <AvatarFallback className="bg-brand-500/10 text-2xl font-semibold text-brand-500">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={handleAvatarClick}
+                    disabled={isUploading}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 opacity-0 transition-opacity hover:opacity-100 focus:opacity-100 disabled:cursor-not-allowed disabled:opacity-0"
+                    aria-label="Alterar foto de perfil"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    ) : (
+                      <Camera className="h-6 w-6 text-white" />
+                    )}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    tabIndex={-1}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="font-display text-2xl font-bold text-foreground">
+                      {user.name}
+                    </h2>
+                    <Badge className="bg-brand-500/10 text-brand-400">
+                      <ShieldCheck className="mr-1 h-3 w-3" />
+                      {roleLabel[user.role] ?? user.role}
                     </Badge>
-                  )}
+                    <Badge className="bg-emerald-500/10 text-emerald-400">
+                      <CheckCircle2 className="mr-1 h-3 w-3" />
+                      Conta ativa
+                    </Badge>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <AtSign className="h-4 w-4" />
+                      {user.email}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {user.department || "Departamento não informado"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    <OverviewMetric
+                      icon={CalendarClock}
+                      label="Capacidade"
+                      value={`${user.weeklyCapacity}h / semana`}
+                      description="Base usada para metas e comparação de carga."
+                    />
+                    <OverviewMetric
+                      icon={TimerReset}
+                      label="Entrada padrão"
+                      value={`${user.timeDefaultDuration} min`}
+                      description={`${viewLabel[user.timeDefaultView]} como visão inicial`}
+                    />
+                    <OverviewMetric
+                      icon={MonitorCog}
+                      label="Modo de envio"
+                      value={submitModeLabel[user.timeSubmitMode]}
+                      description={
+                        user.timeDefaultBillable
+                          ? "Novos lançamentos começam faturáveis."
+                          : "Novos lançamentos começam não faturáveis."
+                      }
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -232,179 +422,263 @@ export default function ProfilePage() {
         </Card>
       </motion.div>
 
-      {/* Personal Info Form */}
-      <motion.div variants={itemVariants}>
-        <Card className="border-border/50 bg-card/80 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="font-display text-base">
-              Informações Pessoais
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(handleSave)} noValidate>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Nome */}
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-name">Nome completo</Label>
-                    <Input
-                      id="profile-name"
-                      placeholder="Seu nome"
-                      aria-describedby={
-                        errors.name ? "profile-name-error" : undefined
-                      }
-                      {...register("name")}
-                    />
-                    {errors.name && (
-                      <p
-                        id="profile-name-error"
-                        className="text-xs text-red-400"
-                        role="alert"
-                      >
-                        {errors.name.message}
-                      </p>
-                    )}
-                  </div>
+      <div className="grid gap-6 xl:grid-cols-2 min-[1800px]:grid-cols-3">
+        <motion.div
+          variants={itemVariants}
+          className="h-full xl:col-span-2 min-[1800px]:col-span-1"
+        >
+          <Card className="h-full border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="font-display text-base">
+                Informações pessoais
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <form
+                onSubmit={handleSubmit(handleSave)}
+                noValidate
+                className="flex h-full flex-col"
+              >
+                <div className="space-y-5">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-name">Nome completo</Label>
+                      <Input
+                        id="profile-name"
+                        placeholder="Seu nome"
+                        {...register("name")}
+                      />
+                      {errors.name ? (
+                        <p className="text-xs text-red-400">
+                          {errors.name.message}
+                        </p>
+                      ) : null}
+                    </div>
 
-                  {/* Email — somente leitura */}
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-email">Email</Label>
-                    <div className="relative">
-                      <AtSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-email">Email</Label>
                       <Input
                         id="profile-email"
                         value={user.email}
-                        className="pl-9"
                         disabled
                         readOnly
-                        aria-describedby="email-hint"
-                        placeholder="Seu email"
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Email gerenciado pela autenticação Microsoft.
+                      </p>
                     </div>
-                    <p
-                      id="email-hint"
-                      className="text-xs text-muted-foreground"
-                    >
-                      Gerenciado pela sua conta Microsoft.
-                    </p>
-                  </div>
 
-                  {/* Departamento */}
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-department">Departamento</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-department">Departamento</Label>
                       <Input
                         id="profile-department"
-                        placeholder="Ex: Analista Desenvolvedor"
-                        className="pl-9"
-                        aria-describedby={
-                          errors.department
-                            ? "profile-department-error"
-                            : undefined
-                        }
+                        placeholder="Ex: Engenharia, Produto, Operações"
                         {...register("department")}
                       />
+                      {errors.department ? (
+                        <p className="text-xs text-red-400">
+                          {errors.department.message}
+                        </p>
+                      ) : null}
                     </div>
-                    {errors.department && (
-                      <p
-                        id="profile-department-error"
-                        className="text-xs text-red-400"
-                        role="alert"
-                      >
-                        {errors.department.message}
-                      </p>
-                    )}
-                  </div>
 
-                  {/* Capacidade semanal */}
-                  <div className="space-y-2">
-                    <Label htmlFor="profile-capacity">
-                      Capacidade semanal (h)
-                    </Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <Label htmlFor="profile-capacity">
+                        Capacidade semanal (h)
+                      </Label>
                       <Input
                         id="profile-capacity"
                         type="number"
                         min={1}
                         max={168}
-                        placeholder="40"
-                        className="pl-9"
-                        aria-describedby={
-                          errors.weeklyCapacity
-                            ? "profile-capacity-error"
-                            : undefined
-                        }
-                        {...register("weeklyCapacity", {
-                          valueAsNumber: true,
-                        })}
+                        {...register("weeklyCapacity", { valueAsNumber: true })}
                       />
+                      {errors.weeklyCapacity ? (
+                        <p className="text-xs text-red-400">
+                          {errors.weeklyCapacity.message}
+                        </p>
+                      ) : null}
                     </div>
-                    {errors.weeklyCapacity && (
-                      <p
-                        id="profile-capacity-error"
-                        className="text-xs text-red-400"
-                        role="alert"
-                      >
-                        {errors.weeklyCapacity.message}
-                      </p>
-                    )}
                   </div>
+
+                  <Separator />
                 </div>
 
-                <Separator />
+                <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                  <p className="text-sm text-muted-foreground">
+                    Atualize seus dados básicos aqui. Preferências de uso ficam
+                    em Configurações.
+                  </p>
+                  <Button
+                    type="submit"
+                    disabled={isSaving || !isDirty}
+                    className="gap-2 bg-brand-500 text-white hover:bg-brand-600"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {isSaving ? "Salvando..." : "Salvar perfil"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-                <Button
-                  type="submit"
-                  disabled={isSaving || !isDirty}
-                  aria-busy={isSaving}
-                  className="gap-2 bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50"
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  {isSaving ? "Salvando..." : "Salvar alterações"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </motion.div>
+        <motion.div variants={itemVariants} className="h-full">
+          <Card className="h-full border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="font-display text-base">
+                Como você trabalha
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <PreferenceRow
+                label="Visão inicial da agenda"
+                value={viewLabel[user.timeDefaultView]}
+              />
+              <PreferenceRow
+                label="Duração padrão"
+                value={`${user.timeDefaultDuration} minutos`}
+              />
+              <PreferenceRow
+                label="Após salvar"
+                value={submitModeLabel[user.timeSubmitMode]}
+              />
+              <PreferenceRow
+                label="Faturável por padrão"
+                value={user.timeDefaultBillable ? "Sim" : "Não"}
+              />
+              <PreferenceRow
+                label="Assistente inteligente"
+                value={user.timeAssistantEnabled ? "Ativo" : "Desativado"}
+              />
+              <PreferenceRow
+                label="Mostrar finais de semana"
+                value={user.timeShowWeekends ? "Sim" : "Não"}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* Account Info */}
+        <motion.div variants={itemVariants} className="h-full">
+          <Card className="h-full border-border/50 bg-card/80 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="font-display text-base">
+                Conta e segurança
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <PreferenceRow label="Provedor de login" value="Microsoft" />
+              <PreferenceRow
+                label="Membro desde"
+                value={format(createdAt, "dd 'de' MMMM 'de' yyyy", {
+                  locale: ptBR,
+                })}
+              />
+              <PreferenceRow
+                label="Última atualização"
+                value={format(lastUpdated, "dd/MM/yyyy 'às' HH:mm", {
+                  locale: ptBR,
+                })}
+              />
+              <PreferenceRow
+                label="Outlook aberto por padrão"
+                value={user.timeOutlookDefaultOpen ? "Sim" : "Não"}
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
       <motion.div variants={itemVariants}>
         <Card className="border-border/50 bg-card/80 backdrop-blur">
           <CardHeader>
-            <CardTitle className="font-display text-base">
-              Informações da Conta
+            <CardTitle className="flex items-center gap-2 font-display text-base">
+              <KeyRound className="h-4 w-4 text-brand-500" />
+              Token da extensão
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Função</dt>
-                <dd className="font-medium text-foreground">
-                  {roleLabel[user.role] ?? user.role}
-                </dd>
+          <CardContent className="space-y-4">
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              Gere um token individual para conectar sua conta à extensão do
+              navegador ou outras automações pessoais. Cada token pertence só a
+              você e pode ser revogado a qualquer momento.
+            </p>
+
+            {isLoadingToken ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando status do token...
               </div>
-              <Separator />
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Provedor de login</dt>
-                <dd className="font-medium text-foreground">Microsoft</dd>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Status atual
+                  </p>
+                  <p className="mt-2 text-sm text-foreground">
+                    {newToken
+                      ? "Token recém-gerado pronto para cópia."
+                      : tokenStatus?.hasToken
+                        ? `Token ativo ${tokenStatus.tokenPreview ?? ""}`
+                        : "Nenhum token ativo no momento."}
+                  </p>
+
+                  {newToken ? (
+                    <div className="mt-4 rounded-xl border border-brand-500/20 bg-brand-500/5 p-3">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <code className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-foreground">
+                          {newToken}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => void handleCopyToken(newToken)}
+                        >
+                          <Copy className="h-4 w-4" />
+                          Copiar token
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void handleGenerateToken()}
+                    disabled={isGeneratingToken}
+                    className="gap-2 bg-brand-500 text-white hover:bg-brand-600"
+                  >
+                    {isGeneratingToken ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                    {tokenStatus?.hasToken ? "Regenerar token" : "Gerar token"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleRevokeToken()}
+                    disabled={isRevokingToken || !tokenStatus?.hasToken}
+                    className="gap-2"
+                  >
+                    {isRevokingToken ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Revogar token
+                  </Button>
+                </div>
               </div>
-              <Separator />
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Status</dt>
-                <dd>
-                  <Badge className="bg-green-500/10 text-green-400">
-                    Ativo
-                  </Badge>
-                </dd>
-              </div>
-            </dl>
+            )}
           </CardContent>
         </Card>
       </motion.div>
