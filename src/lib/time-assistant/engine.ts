@@ -294,7 +294,7 @@ export function buildDeterministicSuggestions({
     if (overlappingCommits.length > 0) {
       score += 0.2 + commitBoost;
       reasons.push(
-        `${overlappingCommits.length} commit(s) aconteceram durante ou perto da reuniao.`,
+        `${overlappingCommits.length} commit(s) aconteceram durante ou perto da reunião.`,
       );
     }
 
@@ -318,7 +318,7 @@ export function buildDeterministicSuggestions({
     const suggestion = {
       projectId: linkedProject?.id ?? null,
       azureWorkItemId: linkedWorkItemId,
-      description: meeting.subject || "Reuniao",
+      description: meeting.subject || "Reunião",
       duration: Math.max(15, meeting.durationMinutes),
       date,
     };
@@ -412,7 +412,7 @@ export function buildDeterministicSuggestions({
     if (overlapsMeeting) {
       score += 0.1 + meetingBoost;
       reasons.push(
-        "Bloco de commits coincide com horario de reuniao relevante.",
+        "Bloco de commits coincide com horario de reunião relevante.",
       );
     }
 

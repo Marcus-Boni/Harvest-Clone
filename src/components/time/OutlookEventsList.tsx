@@ -163,7 +163,7 @@ export function OutlookEventsList({
   if (sortedEvents.length === 0) {
     return (
       <div className="rounded-[24px] border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
-        Nenhuma reuniao encontrada para esta data.
+        Nenhuma reunião encontrada para esta data.
       </div>
     );
   }
