@@ -137,36 +137,45 @@ export function TimeEntryForm({
     }
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    void loadProjects();
-  }, [loadProjects, open]);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
-      setOutlookOpen(false);
+      if (wasOpenRef.current) {
+        setOutlookOpen(false);
+        wasOpenRef.current = false;
+      }
       return;
     }
 
-    submitModeRef.current = allowContinue ? preferences.submitMode : "close";
-    form.reset(getDefaultValues(initialValues, preferences));
-    setActiveDescriptionVariant(
-      initialValues?.descriptionVariants?.defaultVariant ?? null,
-    );
+    // Initialize or reset form only when modal opens or initial values change
+    if (!wasOpenRef.current || initialValues) {
+      void loadProjects();
 
-    if (preferences.outlookDrawerDefaultOpen) {
-      setOutlookOpen(true);
-    }
+      if (!wasOpenRef.current) {
+        wasOpenRef.current = true;
+        
+        if (preferences.outlookDrawerDefaultOpen) {
+          setOutlookOpen(true);
+        }
+      }
 
-    if (initialValues?.azureWorkItemId && initialValues.azureWorkItemTitle) {
-      setWorkItem({
-        id: initialValues.azureWorkItemId,
-        title: initialValues.azureWorkItemTitle,
-      });
-    } else {
-      setWorkItem(null);
+      submitModeRef.current = allowContinue ? preferences.submitMode : "close";
+      form.reset(getDefaultValues(initialValues, preferences));
+      setActiveDescriptionVariant(
+        initialValues?.descriptionVariants?.defaultVariant ?? null,
+      );
+
+      if (initialValues?.azureWorkItemId && initialValues.azureWorkItemTitle) {
+        setWorkItem({
+          id: initialValues.azureWorkItemId,
+          title: initialValues.azureWorkItemTitle,
+        });
+      } else {
+        setWorkItem(null);
+      }
     }
-  }, [allowContinue, form, initialValues, open, preferences]);
+  }, [allowContinue, form, initialValues, loadProjects, open, preferences]);
 
   const selectedDate = form.watch("date");
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
@@ -219,7 +228,7 @@ export function TimeEntryForm({
         ),
         { shouldDirty: true, shouldValidate: true },
       );
-      setOutlookOpen(false);
+      // Removed setOutlookOpen(false) to keep drawer open for "Create and continue" workflow
     },
     [form, preferences.agendaProjectMap],
   );
