@@ -106,7 +106,7 @@ export function TimeEntryForm({
   mode = "create",
   allowContinue = true,
 }: TimeEntryFormProps) {
-  const { preferences, saveLastProjectId, updatePreferences } =
+  const { preferences, saveLastProjectId, saveAgendaProject, updatePreferences } =
     useUserTimePreferences();
   const [projects, setProjects] = useState<Project[]>([]);
   const [workItem, setWorkItem] = useState<{
@@ -185,10 +185,25 @@ export function TimeEntryForm({
         new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
 
       setActiveDescriptionVariant(null);
-      form.setValue("description", event.subject || "", {
+      
+      const subject = event.subject || "";
+      const normalizedSubject = subject.trim().toLowerCase();
+      
+      form.setValue("description", subject, {
         shouldDirty: true,
         shouldValidate: true,
       });
+      
+      if (normalizedSubject && preferences.agendaProjectMap) {
+        const mappedProjectId = preferences.agendaProjectMap[normalizedSubject];
+        if (mappedProjectId) {
+          form.setValue("projectId", mappedProjectId, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }
+      }
+
       form.setValue("date", parseUtc(event.start.dateTime), {
         shouldDirty: true,
       });
@@ -206,7 +221,7 @@ export function TimeEntryForm({
       );
       setOutlookOpen(false);
     },
-    [form],
+    [form, preferences.agendaProjectMap],
   );
 
   async function handleSubmit(values: TimeEntryFormValues) {
@@ -228,6 +243,10 @@ export function TimeEntryForm({
         azureWorkItemId: workItem?.id,
         azureWorkItemTitle: workItem?.title,
       });
+
+      if (values.description && values.projectId) {
+        saveAgendaProject(values.description, values.projectId);
+      }
 
       if (mode === "create") {
         saveLastProjectId(values.projectId);

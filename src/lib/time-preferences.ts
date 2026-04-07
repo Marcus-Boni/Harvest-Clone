@@ -8,6 +8,7 @@ import type {
 
 export interface LocalTimePreferences {
   lastProjectId: string | null;
+  agendaProjectMap: Record<string, string>;
 }
 
 export interface PersistedTimePreferences {
@@ -28,6 +29,7 @@ const STORAGE_KEY = "harvest:time-preferences";
 
 export const DEFAULT_LOCAL_TIME_PREFERENCES: LocalTimePreferences = {
   lastProjectId: null,
+  agendaProjectMap: {},
 };
 
 export const DEFAULT_PERSISTED_TIME_PREFERENCES: PersistedTimePreferences = {
@@ -67,6 +69,12 @@ export function getLocalTimePreferences(): LocalTimePreferences {
     const nextPreferences: LocalTimePreferences = {
       lastProjectId:
         typeof parsed.lastProjectId === "string" ? parsed.lastProjectId : null,
+      agendaProjectMap:
+        typeof parsed.agendaProjectMap === "object" &&
+        parsed.agendaProjectMap !== null &&
+        !Array.isArray(parsed.agendaProjectMap)
+          ? (parsed.agendaProjectMap as Record<string, string>)
+          : {},
     };
 
     const hasLegacyPersistedKeys =

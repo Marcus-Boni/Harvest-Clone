@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { authClient, useSession } from "@/lib/auth-client";
 import {
+  getLocalTimePreferences,
   resolveTimePreferences,
   saveLocalTimePreference,
 } from "@/lib/time-preferences";
@@ -90,9 +91,33 @@ export function useUserTimePreferences() {
     saveLocalTimePreference("lastProjectId", projectId);
   }, []);
 
+  const saveAgendaProject = useCallback(
+    (description: string, projectId: string) => {
+      const currentMap = getLocalTimePreferences().agendaProjectMap || {};
+      const nextMap = { ...currentMap };
+      const normalizedDescription = description.trim().toLowerCase();
+
+      if (!normalizedDescription) return;
+
+      nextMap[normalizedDescription] = projectId;
+
+      const keys = Object.keys(nextMap);
+      if (keys.length > 200) {
+        const keysToRemove = keys.slice(0, keys.length - 200);
+        for (const k of keysToRemove) {
+          delete nextMap[k];
+        }
+      }
+
+      saveLocalTimePreference("agendaProjectMap", nextMap);
+    },
+    [],
+  );
+
   return {
     isSaving,
     preferences,
+    saveAgendaProject,
     saveLastProjectId,
     updatePreferences,
     user,
