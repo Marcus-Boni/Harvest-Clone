@@ -119,6 +119,7 @@ export function TimeEntryForm({
     "concise" | "packaged" | null
   >(initialValues?.descriptionVariants?.defaultVariant ?? null);
   const submitModeRef = useRef<"close" | "continue">(preferences.submitMode);
+  const agendaSubjectRef = useRef<string | null>(null);
 
   const form = useForm<TimeEntryFormValues>({
     resolver: zodResolver(schema),
@@ -165,6 +166,7 @@ export function TimeEntryForm({
       setActiveDescriptionVariant(
         initialValues?.descriptionVariants?.defaultVariant ?? null,
       );
+      agendaSubjectRef.current = null;
 
       if (initialValues?.azureWorkItemId && initialValues.azureWorkItemTitle) {
         setWorkItem({
@@ -197,21 +199,22 @@ export function TimeEntryForm({
       
       const subject = event.subject || "";
       const normalizedSubject = subject.trim().toLowerCase();
+      agendaSubjectRef.current = normalizedSubject || null;
       
       form.setValue("description", subject, {
         shouldDirty: true,
         shouldValidate: true,
       });
       
-      if (normalizedSubject && preferences.agendaProjectMap) {
-        const mappedProjectId = preferences.agendaProjectMap[normalizedSubject];
-        if (mappedProjectId) {
-          form.setValue("projectId", mappedProjectId, {
-            shouldDirty: true,
-            shouldValidate: true,
-          });
-        }
-      }
+      const mappedProjectId =
+        normalizedSubject && preferences.agendaProjectMap
+          ? preferences.agendaProjectMap[normalizedSubject]
+          : null;
+
+      form.setValue("projectId", mappedProjectId || "", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
 
       form.setValue("date", parseUtc(event.start.dateTime), {
         shouldDirty: true,
@@ -228,6 +231,7 @@ export function TimeEntryForm({
         ),
         { shouldDirty: true, shouldValidate: true },
       );
+      
       // Removed setOutlookOpen(false) to keep drawer open for "Create and continue" workflow
     },
     [form, preferences.agendaProjectMap],
@@ -253,7 +257,9 @@ export function TimeEntryForm({
         azureWorkItemTitle: workItem?.title,
       });
 
-      if (values.description && values.projectId) {
+      if (agendaSubjectRef.current && values.projectId) {
+        saveAgendaProject(agendaSubjectRef.current, values.projectId);
+      } else if (values.description && values.projectId) {
         saveAgendaProject(values.description, values.projectId);
       }
 
@@ -286,6 +292,7 @@ export function TimeEntryForm({
           billable: values.billable,
         });
         setActiveDescriptionVariant(null);
+        agendaSubjectRef.current = null;
         setWorkItem(null);
         return;
       }
