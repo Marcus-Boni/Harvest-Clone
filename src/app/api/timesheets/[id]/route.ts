@@ -27,7 +27,7 @@ export async function GET(
 
   try {
     const ts = await db.query.timesheet.findFirst({
-      where: and(eq(timesheet.id, id), eq(timesheet.userId, session.user.id)),
+      where: eq(timesheet.id, id),
       with: {
         approver: { columns: { id: true, name: true } },
         entries: {
@@ -49,6 +49,20 @@ export async function GET(
       );
     }
 
+    const actor = getActorContext(session.user);
+    const isOwner = ts.userId === session.user.id;
+    const canView =
+      isOwner ||
+      actor.role === "admin" ||
+      (actor.role === "manager" && (await canManageUser(actor, ts.userId)));
+
+    if (!canView) {
+      return Response.json(
+        { error: "Timesheet não encontrado." },
+        { status: 404 },
+      );
+    }
+
     if (ts.status === "open" || ts.status === "rejected") {
       const { start, end } = getPeriodRange(ts.period, ts.periodType);
 
@@ -60,7 +74,7 @@ export async function GET(
         .from(timeEntry)
         .where(
           and(
-            eq(timeEntry.userId, session.user.id),
+            eq(timeEntry.userId, ts.userId),
             gte(timeEntry.date, start),
             lte(timeEntry.date, end),
             isNull(timeEntry.deletedAt),
@@ -73,7 +87,7 @@ export async function GET(
 
       ts.entries = await db.query.timeEntry.findMany({
         where: and(
-          eq(timeEntry.userId, session.user.id),
+          eq(timeEntry.userId, ts.userId),
           gte(timeEntry.date, start),
           lte(timeEntry.date, end),
           isNull(timeEntry.deletedAt),

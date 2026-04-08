@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { TimesheetStatusBadge } from "@/components/timesheets/TimesheetStatusBadge";
@@ -135,29 +136,36 @@ export function ApprovalCard({
           <TimesheetStatusBadge status={timesheet.status} />
 
           {/* Actions */}
-          {timesheet.status === "submitted" && (
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-green-600 text-white hover:bg-green-700"
-                onClick={() => setApproveOpen(true)}
-                disabled={loading}
-              >
-                <Check className="mr-1.5 h-3.5 w-3.5" />
-                Aprovar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setRejectOpen(true)}
-                disabled={loading}
-              >
-                <X className="mr-1.5 h-3.5 w-3.5" />
-                Rejeitar
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" asChild>
+              <Link href={`/dashboard/timesheets/${timesheet.id}`}>
+                Detalhes
+              </Link>
+            </Button>
+            {timesheet.status === "submitted" && (
+              <>
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700"
+                  onClick={() => setApproveOpen(true)}
+                  disabled={loading}
+                >
+                  <Check className="mr-1.5 h-3.5 w-3.5" />
+                  Aprovar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setRejectOpen(true)}
+                  disabled={loading}
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" />
+                  Rejeitar
+                </Button>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
 
