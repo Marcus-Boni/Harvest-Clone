@@ -1,9 +1,9 @@
 "use client";
 
-import { CalendarDays, Rows3, Sun } from "lucide-react";
+import { CalendarDays, Layers, Rows3, Sun } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export type TimeView = "day" | "week" | "month";
+export type TimeView = "day" | "week" | "month" | "timesheets";
 
 interface TimeViewTabsProps {
   activeView: TimeView;
@@ -15,7 +15,12 @@ export function TimeViewTabs({ activeView, onViewChange }: TimeViewTabsProps) {
     <Tabs
       value={activeView}
       onValueChange={(value) => {
-        if (value === "day" || value === "week" || value === "month") {
+        if (
+          value === "day" ||
+          value === "week" ||
+          value === "month" ||
+          value === "timesheets"
+        ) {
           onViewChange(value);
         }
       }}
@@ -41,6 +46,13 @@ export function TimeViewTabs({ activeView, onViewChange }: TimeViewTabsProps) {
         >
           <CalendarDays className="h-4 w-4" />
           Mês
+        </TabsTrigger>
+        <TabsTrigger
+          value="timesheets"
+          className="gap-2 rounded-full px-5 transition-all data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-black/5 dark:data-[state=active]:bg-neutral-800 dark:data-[state=active]:text-orange-400 dark:data-[state=active]:ring-white/10"
+        >
+          <Layers className="h-4 w-4" />
+          Semanas
         </TabsTrigger>
       </TabsList>
     </Tabs>

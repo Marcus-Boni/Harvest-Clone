@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DayView } from "@/components/time/DayView";
 import { MonthView } from "@/components/time/MonthView";
+import { TimesheetsView } from "@/components/time/TimesheetsView";
 import {
   TimeEntryForm,
   type TimeEntryFormInitialValues,
@@ -923,6 +924,8 @@ export default function TimePage() {
             showWeekends={showWeekends}
             onShowWeekendsChange={handleShowWeekendsChange}
           />
+        ) : activeView === "timesheets" ? (
+          <TimesheetsView />
         ) : (
           <MonthView
             referenceDate={selectedDate}

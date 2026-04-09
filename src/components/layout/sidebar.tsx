@@ -48,7 +48,6 @@ interface NavigationItem {
 const baseNavigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Registrar Tempo", href: "/dashboard/time", icon: Clock },
-  { name: "Timesheets", href: "/dashboard/timesheets", icon: Layers },
   { name: "Projetos", href: "/dashboard/projects", icon: Folder },
   {
     name: "Integrações",
@@ -183,7 +182,7 @@ export function Sidebar() {
       timesheet.status === "open" || timesheet.status === "rejected",
   ).length;
   const navigation = baseNavigation.map((item) =>
-    item.href === "/dashboard/timesheets"
+    item.href === "/dashboard/time"
       ? {
           ...item,
           badge: pendingTimesheetCount > 0 ? pendingTimesheetCount : undefined,

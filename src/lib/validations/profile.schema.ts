@@ -23,7 +23,7 @@ export const updateProfileSchema = z
       .min(1, "Capacidade mínima de 1 hora")
       .max(168, "Capacidade máxima de 168 horas (1 semana)")
       .optional(),
-    timeDefaultView: z.enum(["day", "week", "month"]).optional(),
+    timeDefaultView: z.enum(["day", "week", "month", "timesheets"]).optional(),
     timeDefaultDuration: z
       .number()
       .int("A duração deve ser um número inteiro")
