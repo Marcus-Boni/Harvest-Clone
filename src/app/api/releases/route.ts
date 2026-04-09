@@ -20,9 +20,7 @@ export async function GET(req: Request): Promise<Response> {
   try {
     const releases = await db.query.appRelease.findMany({
       where:
-        actor.role === "admin"
-          ? undefined
-          : eq(appRelease.status, "published"),
+        actor.role === "admin" ? undefined : eq(appRelease.status, "published"),
       with: {
         author: { columns: { id: true, name: true, image: true } },
       },

@@ -136,12 +136,16 @@ export async function PUT(
 
     const data = parsed.data;
     const managerId =
-      actor.role === "manager" ? actor.userId : data.managerId || existing.managerId || actor.userId;
+      actor.role === "manager"
+        ? actor.userId
+        : data.managerId || existing.managerId || actor.userId;
     const assigneeIds = [...new Set([managerId, ...data.memberIds])];
 
     if (!(await ensureManagerAssignableUsers(actor, assigneeIds))) {
       return Response.json(
-        { error: "Gerentes só podem atribuir a si mesmos e aos seus liderados." },
+        {
+          error: "Gerentes só podem atribuir a si mesmos e aos seus liderados.",
+        },
         { status: 403 },
       );
     }
@@ -158,7 +162,10 @@ export async function PUT(
           status: data.status ?? existing.status,
           billable: data.billable,
           budget: data.budget ?? null,
-          azureProjectId: data.azureProjectId !== undefined ? data.azureProjectId : existing.azureProjectId,
+          azureProjectId:
+            data.azureProjectId !== undefined
+              ? data.azureProjectId
+              : existing.azureProjectId,
           imageUrl: data.imageUrl ?? null,
           managerId,
           scopeId: data.scopeId ?? null,
@@ -210,16 +217,15 @@ export async function PUT(
       },
     });
 
-    const projectData =
-      updatedProject?.scope
-        ? {
-            ...updatedProject,
-            scope: {
-              ...updatedProject.scope,
-              stages: safeParseStages(updatedProject.scope.stages),
-            },
-          }
-        : updatedProject;
+    const projectData = updatedProject?.scope
+      ? {
+          ...updatedProject,
+          scope: {
+            ...updatedProject.scope,
+            stages: safeParseStages(updatedProject.scope.stages),
+          },
+        }
+      : updatedProject;
 
     return Response.json({ project: projectData });
   } catch (error) {

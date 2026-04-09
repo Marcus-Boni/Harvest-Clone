@@ -1,7 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, AlertCircle, CalendarRange, Clock, Database, TrendingUp, Zap } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CalendarRange,
+  Clock,
+  Database,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ProjectProgress } from "./types";
@@ -39,24 +47,28 @@ export function ProjectProgressBar({
     if (!showSchedule || !startDate || !endDate) return null;
     const [sYr, sMo, sDa] = startDate.split("-").map(Number);
     const [eYr, eMo, eDa] = endDate.split("-").map(Number);
-    
+
     const startObj = new Date(Date.UTC(sYr, sMo - 1, sDa, 0, 0, 0));
     const endObj = new Date(Date.UTC(eYr, eMo - 1, eDa, 23, 59, 59));
     const nowObj = new Date();
-    
+
     const start = startObj.getTime();
     const end = endObj.getTime();
     const now = nowObj.getTime();
 
     const ONE_DAY = 86400000;
     const totalDays = Math.max(1, Math.ceil((end - start) / ONE_DAY));
-    
+
     if (now < start) return { percent: 0, label: `0 / ${totalDays} dias` };
-    if (now >= end) return { percent: 100, label: `${totalDays} / ${totalDays} dias` };
+    if (now >= end)
+      return { percent: 100, label: `${totalDays} / ${totalDays} dias` };
 
     const elapsedDays = Math.ceil((now - start) / ONE_DAY);
-    const percent = Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
-    
+    const percent = Math.min(
+      100,
+      Math.max(0, Math.round(((now - start) / (end - start)) * 100)),
+    );
+
     return { percent, label: `${elapsedDays} / ${totalDays} dias` };
   }, [startDate, endDate, showSchedule]);
 
@@ -107,11 +119,18 @@ export function ProjectProgressBar({
   // ── Loading skeleton ────────────────────────────────────────────────────────
   if (state.status === "loading") {
     return (
-      <div className={cn("space-y-2", className)} aria-label="Carregando progresso" role="status">
+      <div
+        className={cn("space-y-2", className)}
+        aria-label="Carregando progresso"
+        role="status"
+      >
         <div className="h-1.5 w-full animate-pulse rounded-full bg-white/10" />
         <div className="flex gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-3 w-16 animate-pulse rounded bg-white/10" />
+            <div
+              key={i}
+              className="h-3 w-16 animate-pulse rounded bg-white/10"
+            />
           ))}
         </div>
       </div>
@@ -121,7 +140,12 @@ export function ProjectProgressBar({
   // ── Fetch error ─────────────────────────────────────────────────────────────
   if (state.status === "error") {
     return (
-      <div className={cn("flex items-center gap-1.5 text-[11px] text-red-400/70", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-1.5 text-[11px] text-red-400/70",
+          className,
+        )}
+      >
         <AlertCircle className="h-3 w-3 shrink-0" />
         <span>Erro ao carregar métricas</span>
       </div>
@@ -132,7 +156,10 @@ export function ProjectProgressBar({
   const { data } = state;
 
   if (data.unconfigured) {
-    const messages: Record<NonNullable<ProjectProgress["unconfiguredReason"]>, string> = {
+    const messages: Record<
+      NonNullable<ProjectProgress["unconfiguredReason"]>,
+      string
+    > = {
       no_azure_linked: "Azure DevOps não vinculado",
       no_azure_config: "Integração Azure não configurada",
       no_data: "Sem estimativas registradas no DevOps",
@@ -142,7 +169,12 @@ export function ProjectProgressBar({
       : "Dados indisponíveis";
 
     return (
-      <div className={cn("flex items-center gap-1.5 text-[11px] text-neutral-500 italic", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-1.5 text-[11px] text-neutral-500 italic",
+          className,
+        )}
+      >
         <Database className="h-3 w-3 shrink-0" />
         <span>{msg}</span>
       </div>
@@ -180,7 +212,7 @@ export function ProjectProgressBar({
           />
         </div>
       </div>
-      
+
       {scheduleData && (
         <div className="relative pt-1">
           <div className="flex items-center justify-between mb-1">
@@ -188,24 +220,32 @@ export function ProjectProgressBar({
               <CalendarRange className="h-3 w-3" />
               Cronograma ({scheduleData.label})
             </span>
-            <span className={cn(
-              "text-[11px] font-mono font-semibold", 
-              scheduleData.percent > progressPercent + 15 ? "text-red-400" : "text-blue-400"
-            )}>
+            <span
+              className={cn(
+                "text-[11px] font-mono font-semibold",
+                scheduleData.percent > progressPercent + 15
+                  ? "text-red-400"
+                  : "text-blue-400",
+              )}
+            >
               {scheduleData.percent}%
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <motion.div
               className={cn(
-                "h-full rounded-full bg-gradient-to-r", 
-                scheduleData.percent > progressPercent + 15 
-                  ? "from-red-500/80 to-red-400/80" 
-                  : "from-blue-500/80 to-blue-400/80"
+                "h-full rounded-full bg-gradient-to-r",
+                scheduleData.percent > progressPercent + 15
+                  ? "from-red-500/80 to-red-400/80"
+                  : "from-blue-500/80 to-blue-400/80",
               )}
               initial={{ width: 0 }}
               animate={{ width: `${scheduleData.percent}%` }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{
+                duration: 0.8,
+                delay: 0.2,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
             />
           </div>
         </div>
@@ -245,10 +285,17 @@ interface ProgressMetricProps {
   highlight: boolean;
 }
 
-function ProgressMetric({ icon, label, value, highlight }: ProgressMetricProps) {
+function ProgressMetric({
+  icon,
+  label,
+  value,
+  highlight,
+}: ProgressMetricProps) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] text-neutral-500 uppercase tracking-wide">{label}</span>
+      <span className="text-[10px] text-neutral-500 uppercase tracking-wide">
+        {label}
+      </span>
       <div
         className={cn(
           "flex items-center gap-1 font-mono text-[11px] font-semibold",

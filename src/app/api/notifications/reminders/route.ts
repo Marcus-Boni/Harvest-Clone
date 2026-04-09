@@ -41,9 +41,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // Managers are always restricted to direct_reports
   const scope =
-    actor.role === "admin"
-      ? (requestedScope ?? "all")
-      : "direct_reports";
+    actor.role === "admin" ? (requestedScope ?? "all") : "direct_reports";
 
   const recipients = await resolveReminderRecipients({
     actorId: actor.userId,
@@ -86,10 +84,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (sent === 0 && failed > 0) {
-    return Response.json(
-      { error: "Falha ao enviar e-mails" },
-      { status: 502 },
-    );
+    return Response.json({ error: "Falha ao enviar e-mails" }, { status: 502 });
   }
 
   return Response.json({ sent, failed, logId });

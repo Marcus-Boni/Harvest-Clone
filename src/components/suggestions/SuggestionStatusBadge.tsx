@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Circle,
-  Eye,
-  Lightbulb,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Circle, Eye, Lightbulb, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SuggestionStatus } from "@/lib/db/schema";
 
@@ -38,8 +32,7 @@ const STATUS_CONFIG: Record<
   },
   rejected: {
     label: "Rejeitada",
-    className:
-      "border-red-500/30 bg-red-500/10 text-red-400 dark:text-red-300",
+    className: "border-red-500/30 bg-red-500/10 text-red-400 dark:text-red-300",
     icon: XCircle,
   },
   implemented: {

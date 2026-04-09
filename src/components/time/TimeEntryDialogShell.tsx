@@ -97,7 +97,9 @@ export function TimeEntryDialogShell({
         <div
           className={cn(
             "hidden transform-gpu shrink-0 self-stretch relative transition-all duration-300 ease-out md:block",
-            asideOpen && aside ? "w-[320px] opacity-100" : "w-0 opacity-0 pointer-events-none",
+            asideOpen && aside
+              ? "w-[320px] opacity-100"
+              : "w-0 opacity-0 pointer-events-none",
           )}
         >
           <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl border border-border/60 bg-background shadow-lg w-[320px]">

@@ -77,9 +77,7 @@ function buildImportMessage(summary: {
   const parts: string[] = [];
 
   if (summary.createdCount > 0) {
-    parts.push(
-      `${summary.createdCount} projeto(s) criado(s) na plataforma`,
-    );
+    parts.push(`${summary.createdCount} projeto(s) criado(s) na plataforma`);
   }
 
   if (summary.joinedCount > 0) {
@@ -198,11 +196,15 @@ export async function GET(req: Request): Promise<Response> {
         continue;
       }
 
-      console.warn("[GET /api/integrations/azure-devops/projects][duplicate_azure_project_id]", {
-        azureProjectId: existingProject.azureProjectId,
-        keptProjectId: existingByAzureId.get(existingProject.azureProjectId)?.id,
-        duplicateProjectId: existingProject.id,
-      });
+      console.warn(
+        "[GET /api/integrations/azure-devops/projects][duplicate_azure_project_id]",
+        {
+          azureProjectId: existingProject.azureProjectId,
+          keptProjectId: existingByAzureId.get(existingProject.azureProjectId)
+            ?.id,
+          duplicateProjectId: existingProject.id,
+        },
+      );
     }
 
     const projects = data.value.map((item) => {
@@ -309,11 +311,15 @@ export async function POST(req: Request): Promise<Response> {
         continue;
       }
 
-      console.warn("[POST /api/integrations/azure-devops/projects][duplicate_azure_project_id]", {
-        azureProjectId: existingProject.azureProjectId,
-        keptProjectId: existingByAzureId.get(existingProject.azureProjectId)?.id,
-        duplicateProjectId: existingProject.id,
-      });
+      console.warn(
+        "[POST /api/integrations/azure-devops/projects][duplicate_azure_project_id]",
+        {
+          azureProjectId: existingProject.azureProjectId,
+          keptProjectId: existingByAzureId.get(existingProject.azureProjectId)
+            ?.id,
+          duplicateProjectId: existingProject.id,
+        },
+      );
     }
 
     const colors = [

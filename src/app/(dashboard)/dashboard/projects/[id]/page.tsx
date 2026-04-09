@@ -48,7 +48,10 @@ const itemVariants = {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const STATUS_INFO: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+const STATUS_INFO: Record<
+  string,
+  { label: string; className: string; icon: React.ReactNode }
+> = {
   open: {
     label: "Em Aberto",
     className: "bg-blue-500/10 text-blue-400",
@@ -79,7 +82,13 @@ function formatDateShort(date: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+function InfoRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 py-3">
       <span className="text-sm text-muted-foreground shrink-0">{label}</span>
@@ -219,16 +228,24 @@ export default function ProjectDetailPage() {
 
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 {project.clientName && (
-                  <span className="text-sm text-muted-foreground">{project.clientName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {project.clientName}
+                  </span>
                 )}
                 {project.source === "azure-devops" && (
-                  <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-400 gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-blue-500/10 text-blue-400 gap-1"
+                  >
                     <Cloud className="h-3 w-3" />
                     Azure DevOps
                   </Badge>
                 )}
                 {project.billable && (
-                  <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-400">
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-green-500/10 text-green-400"
+                  >
                     Billable
                   </Badge>
                 )}
@@ -253,12 +270,13 @@ export default function ProjectDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ─── Main column ──────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
-
           {/* Vision Geral */}
           <motion.div variants={itemVariants}>
             <Card className="border-border/50 bg-card/80 backdrop-blur">
               <CardHeader className="pb-2">
-                <CardTitle className="font-display text-base">Visão Geral</CardTitle>
+                <CardTitle className="font-display text-base">
+                  Visão Geral
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-0 divide-y divide-border/50">
                 {project.description && (
@@ -269,7 +287,13 @@ export default function ProjectDetailPage() {
 
                 <InfoRow label="Cliente">{project.clientName || "—"}</InfoRow>
                 <InfoRow label="Status">
-                  <Badge variant="secondary" className={cn("text-xs gap-1 inline-flex", statusInfo.className)}>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "text-xs gap-1 inline-flex",
+                      statusInfo.className,
+                    )}
+                  >
                     {statusInfo.icon}
                     {statusInfo.label}
                   </Badge>
@@ -277,7 +301,12 @@ export default function ProjectDetailPage() {
                 <InfoRow label="Faturável">
                   <Badge
                     variant="secondary"
-                    className={cn("text-xs", project.billable ? "bg-green-500/10 text-green-400" : "bg-muted text-muted-foreground")}
+                    className={cn(
+                      "text-xs",
+                      project.billable
+                        ? "bg-green-500/10 text-green-400"
+                        : "bg-muted text-muted-foreground",
+                    )}
                   >
                     {project.billable ? "Sim" : "Não"}
                   </Badge>
@@ -286,10 +315,16 @@ export default function ProjectDetailPage() {
                   <InfoRow label="Budget">{project.budget}h</InfoRow>
                 )}
                 <InfoRow label="Origem">
-                  {project.source === "azure-devops" ? "Azure DevOps" : "Manual"}
+                  {project.source === "azure-devops"
+                    ? "Azure DevOps"
+                    : "Manual"}
                 </InfoRow>
-                <InfoRow label="Criado em">{formatDate(project.createdAt)}</InfoRow>
-                <InfoRow label="Atualizado em">{formatDate(project.updatedAt)}</InfoRow>
+                <InfoRow label="Criado em">
+                  {formatDate(project.createdAt)}
+                </InfoRow>
+                <InfoRow label="Atualizado em">
+                  {formatDate(project.updatedAt)}
+                </InfoRow>
               </CardContent>
             </Card>
           </motion.div>
@@ -314,7 +349,9 @@ export default function ProjectDetailPage() {
                         <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
                         {formatDateShort(project.startDate)}
                       </span>
-                    ) : "—"}
+                    ) : (
+                      "—"
+                    )}
                   </InfoRow>
                   <InfoRow label="Data Fim">
                     {project.endDate ? (
@@ -322,7 +359,9 @@ export default function ProjectDetailPage() {
                         <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
                         {formatDateShort(project.endDate)}
                       </span>
-                    ) : "—"}
+                    ) : (
+                      "—"
+                    )}
                   </InfoRow>
                 </CardContent>
               </Card>
@@ -355,7 +394,9 @@ export default function ProjectDetailPage() {
                     <>
                       <div className="flex flex-wrap items-center gap-2">
                         <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-medium text-foreground">{project.scope.name}</span>
+                        <span className="font-medium text-foreground">
+                          {project.scope.name}
+                        </span>
                         <Badge
                           variant="secondary"
                           className="text-[10px] bg-orange-500/10 text-orange-400"
@@ -367,12 +408,17 @@ export default function ProjectDetailPage() {
                       {/* Stages pipeline */}
                       {project.scope.stages.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Etapas</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Etapas
+                          </p>
                           <div className="flex flex-wrap items-center gap-1.5">
                             {project.scope.stages.map((stage, idx) => {
                               const isCurrent = stage === project.currentStage;
                               return (
-                                <span key={stage} className="flex items-center gap-1">
+                                <span
+                                  key={stage}
+                                  className="flex items-center gap-1"
+                                >
                                   <Badge
                                     variant="secondary"
                                     className={cn(
@@ -397,7 +443,9 @@ export default function ProjectDetailPage() {
 
                       {project.currentStage && (
                         <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2">
-                          <p className="text-xs text-muted-foreground">Etapa atual</p>
+                          <p className="text-xs text-muted-foreground">
+                            Etapa atual
+                          </p>
                           <p className="text-sm font-semibold text-orange-300 mt-0.5">
                             {project.currentStage}
                           </p>
@@ -407,7 +455,9 @@ export default function ProjectDetailPage() {
                   ) : (
                     <div className="flex flex-col items-center gap-3 py-4 text-center">
                       <Tag className="h-8 w-8 text-muted-foreground/30" />
-                      <p className="text-sm text-muted-foreground">Nenhum escopo vinculado</p>
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum escopo vinculado
+                      </p>
                       {isPrivileged && (
                         <Button
                           variant="outline"
@@ -439,7 +489,10 @@ export default function ProjectDetailPage() {
                   <Activity className="h-4 w-4 text-muted-foreground" />
                   Desempenho e Progresso
                   {project.azureProjectId && (
-                    <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-400 gap-1 ml-auto">
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] bg-blue-500/10 text-blue-400 gap-1 ml-auto"
+                    >
                       <Cloud className="h-3 w-3" />
                       Azure DevOps
                     </Badge>
@@ -459,9 +512,13 @@ export default function ProjectDetailPage() {
                 ) : (
                   <div className="flex flex-col items-center gap-3 py-4 text-center">
                     <Cloud className="h-8 w-8 text-muted-foreground/30" />
-                    <p className="text-sm text-muted-foreground">Azure DevOps não vinculado</p>
+                    <p className="text-sm text-muted-foreground">
+                      Azure DevOps não vinculado
+                    </p>
                     <p className="text-xs text-muted-foreground max-w-xs">
-                      Vincule este projeto a um projeto do Azure DevOps para acompanhar estimativas, horas concluídas e eficiência automaticamente.
+                      Vincule este projeto a um projeto do Azure DevOps para
+                      acompanhar estimativas, horas concluídas e eficiência
+                      automaticamente.
                     </p>
                     {isPrivileged && (
                       <Button
@@ -492,7 +549,9 @@ export default function ProjectDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-0 divide-y divide-border/50">
                   <InfoRow label="Project ID">
-                    <span className="font-mono text-xs break-all">{project.azureProjectId}</span>
+                    <span className="font-mono text-xs break-all">
+                      {project.azureProjectId}
+                    </span>
                   </InfoRow>
                   {project.azureProjectUrl && (
                     <InfoRow label="Link">
@@ -515,7 +574,6 @@ export default function ProjectDetailPage() {
 
         {/* ─── Sidebar ───────────────────────────────────────────────────── */}
         <div className="space-y-6">
-
           {/* Metrics quick-view (Azure) */}
           {project.azureProjectId && (
             <motion.div variants={itemVariants}>
@@ -619,7 +677,8 @@ export default function ProjectDetailPage() {
                         <CalendarRange className="h-3.5 w-3.5" /> Período
                       </span>
                       <span className="font-mono text-right text-xs">
-                        {formatDateShort(project.startDate)} → {formatDateShort(project.endDate)}
+                        {formatDateShort(project.startDate)} →{" "}
+                        {formatDateShort(project.endDate)}
                       </span>
                     </div>
                   )}
@@ -628,7 +687,9 @@ export default function ProjectDetailPage() {
                       <span className="text-muted-foreground flex items-center gap-1.5">
                         <Tag className="h-3.5 w-3.5" /> Escopo
                       </span>
-                      <span className="truncate max-w-[120px] text-right">{project.scope.name}</span>
+                      <span className="truncate max-w-[120px] text-right">
+                        {project.scope.name}
+                      </span>
                     </div>
                   )}
                 </CardContent>

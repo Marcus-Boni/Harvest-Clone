@@ -200,12 +200,9 @@ export const projectScope = pgTable(
   (table) => [index("project_scope_name_idx").on(table.name)],
 );
 
-export const projectScopeRelations = relations(
-  projectScope,
-  ({ many }) => ({
-    projects: many(project),
-  }),
-);
+export const projectScopeRelations = relations(projectScope, ({ many }) => ({
+  projects: many(project),
+}));
 
 export const project = pgTable(
   "project",

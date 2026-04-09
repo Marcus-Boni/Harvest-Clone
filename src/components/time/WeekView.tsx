@@ -162,13 +162,16 @@ export function WeekView({
     useSensor(KeyboardSensor),
   );
 
-  const isEntryDraggable = useCallback((entry: TimeEntry) => {
-    if (weekLocked) {
-      return false;
-    }
+  const isEntryDraggable = useCallback(
+    (entry: TimeEntry) => {
+      if (weekLocked) {
+        return false;
+      }
 
-    return isTimesheetEditableStatus(entry.timesheet?.status);
-  }, [weekLocked]);
+      return isTimesheetEditableStatus(entry.timesheet?.status);
+    },
+    [weekLocked],
+  );
 
   const isResubmission = weekTimesheetStatus === "rejected";
 
@@ -359,7 +362,8 @@ export function WeekView({
               >
                 Aprovada
               </Badge>
-            ) : onSubmitWeek && isTimesheetSubmittableStatus(weekTimesheetStatus) ? (
+            ) : onSubmitWeek &&
+              isTimesheetSubmittableStatus(weekTimesheetStatus) ? (
               <Button
                 variant="outline"
                 className="rounded-full"
@@ -490,8 +494,8 @@ export function WeekView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {isResubmission ? "Submeter novamente" : "Submeter"} semana {weekNumber}{" "}
-              de {weekYear}?
+              {isResubmission ? "Submeter novamente" : "Submeter"} semana{" "}
+              {weekNumber} de {weekYear}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               Isso {isResubmission ? "reenviará" : "enviará"}{" "}

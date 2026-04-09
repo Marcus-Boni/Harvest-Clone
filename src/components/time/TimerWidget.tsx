@@ -121,7 +121,15 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
           : "Não foi possível iniciar o timer.",
       );
     }
-  }, [billable, description, projectId, startTimer, todayLockMessage, todayLocked, workItem]);
+  }, [
+    billable,
+    description,
+    projectId,
+    startTimer,
+    todayLockMessage,
+    todayLocked,
+    workItem,
+  ]);
 
   const handleStop = useCallback(async () => {
     setStopping(true);
@@ -245,8 +253,8 @@ export function TimerWidget({ projects, onEntrySaved }: TimerWidgetProps) {
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Nenhum timer ativo. Abra o painel apenas quando precisar iniciar
-                  uma medicao em tempo real.
+                  Nenhum timer ativo. Abra o painel apenas quando precisar
+                  iniciar uma medicao em tempo real.
                 </p>
                 {todayLocked ? (
                   <div className="rounded-xl border border-amber-300/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">

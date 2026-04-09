@@ -145,10 +145,7 @@ export async function PATCH(
         return Response.json({ error: "Sem permissão." }, { status: 403 });
       }
 
-      if (
-        ts.status !== "open" &&
-        ts.status !== "rejected"
-      ) {
+      if (ts.status !== "open" && ts.status !== "rejected") {
         return Response.json(
           {
             error:
@@ -181,7 +178,9 @@ export async function PATCH(
             entryCount: sql<number>`COUNT(*)`,
           })
           .from(timeEntry)
-          .where(and(eq(timeEntry.timesheetId, id), isNull(timeEntry.deletedAt)));
+          .where(
+            and(eq(timeEntry.timesheetId, id), isNull(timeEntry.deletedAt)),
+          );
 
         if ((totals?.entryCount ?? 0) === 0) {
           throw new Error("EMPTY_TIMESHEET");
@@ -220,7 +219,10 @@ export async function PATCH(
         );
       }
 
-      if (actor.role === "manager" && !(await canManageUser(actor, ts.userId))) {
+      if (
+        actor.role === "manager" &&
+        !(await canManageUser(actor, ts.userId))
+      ) {
         return Response.json(
           { error: "Você não pode aprovar timesheets fora do seu time." },
           { status: 403 },
@@ -242,7 +244,9 @@ export async function PATCH(
         await tx
           .update(timeEntry)
           .set({ azdoSyncStatus: "pending" })
-          .where(and(eq(timeEntry.timesheetId, id), isNull(timeEntry.deletedAt)));
+          .where(
+            and(eq(timeEntry.timesheetId, id), isNull(timeEntry.deletedAt)),
+          );
 
         return approvedTimesheet;
       });
@@ -282,7 +286,10 @@ export async function PATCH(
         );
       }
 
-      if (actor.role === "manager" && !(await canManageUser(actor, ts.userId))) {
+      if (
+        actor.role === "manager" &&
+        !(await canManageUser(actor, ts.userId))
+      ) {
         return Response.json(
           { error: "Você não pode rejeitar timesheets fora do seu time." },
           { status: 403 },

@@ -63,7 +63,9 @@ export async function getMicrosoftAccountSnapshot(
       userId: account.userId,
     })
     .from(account)
-    .where(and(eq(account.userId, userId), eq(account.providerId, "microsoft")));
+    .where(
+      and(eq(account.userId, userId), eq(account.providerId, "microsoft")),
+    );
 
   if (microsoftAccounts.length === 0) {
     return null;

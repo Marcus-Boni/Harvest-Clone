@@ -1,4 +1,8 @@
-import { buildScopedUserWhere, getActiveSession, getActorContext } from "@/lib/access-control";
+import {
+  buildScopedUserWhere,
+  getActiveSession,
+  getActorContext,
+} from "@/lib/access-control";
 import { db } from "@/lib/db";
 import { user } from "@/lib/db/schema";
 

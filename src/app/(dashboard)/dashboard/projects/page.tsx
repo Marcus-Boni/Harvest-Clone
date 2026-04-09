@@ -121,7 +121,7 @@ export default function ProjectsPage() {
   const availableScopes = useMemo(() => {
     const scopesMap = new Map<string, string>();
     for (const p of projects) {
-        if (p.scope) scopesMap.set(p.scope.id, p.scope.name);
+      if (p.scope) scopesMap.set(p.scope.id, p.scope.name);
     }
     return Array.from(scopesMap.entries())
       .map(([id, name]) => ({ id, name }))
@@ -134,7 +134,8 @@ export default function ProjectsPage() {
       if (filters.status !== "all" && p.status !== filters.status) return false;
 
       // Scope filter (Admin only)
-      if (isAdmin && filters.scopeId !== "all" && p.scopeId !== filters.scopeId) return false;
+      if (isAdmin && filters.scopeId !== "all" && p.scopeId !== filters.scopeId)
+        return false;
 
       // Membership filter (privileged only)
       if (
@@ -367,7 +368,12 @@ export default function ProjectsPage() {
                 <Button
                   variant="outline"
                   onClick={() =>
-                    setFilters({ search: "", status: "all", membership: "all" })
+                    setFilters({
+                      search: "",
+                      status: "all",
+                      membership: "all",
+                      scopeId: "all",
+                    })
                   }
                   className="h-12 px-8 border-neutral-800 text-neutral-300 hover:bg-white/5 rounded-xl transition-all"
                 >

@@ -83,14 +83,19 @@ function formatDate(date: string | null): string | null {
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export function ProjectCard({ project: proj, isPrivileged, onEdit }: ProjectCardProps) {
+export function ProjectCard({
+  project: proj,
+  isPrivileged,
+  onEdit,
+}: ProjectCardProps) {
   const members = proj.members ?? [];
   const memberCount = members.length;
   const visibleMembers = members.slice(0, 4);
   const isArchived = proj.status === "archived";
 
   const statusLabel = STATUS_LABELS[proj.status] ?? proj.status;
-  const statusColorClass = STATUS_COLORS[proj.status] ?? "bg-neutral-500/10 text-neutral-400";
+  const statusColorClass =
+    STATUS_COLORS[proj.status] ?? "bg-neutral-500/10 text-neutral-400";
 
   const hasDateRange = proj.startDate || proj.endDate;
 
@@ -114,7 +119,11 @@ export function ProjectCard({ project: proj, isPrivileged, onEdit }: ProjectCard
           >
             <CardHeader className="pb-2">
               <div className="flex items-start gap-3">
-                <ProjectImage imageUrl={proj.imageUrl} name={proj.name} color={proj.color} />
+                <ProjectImage
+                  imageUrl={proj.imageUrl}
+                  name={proj.name}
+                  color={proj.color}
+                />
                 <div className="min-w-0 flex-1 overflow-hidden">
                   {/* Title + edit button */}
                   <div className="flex min-w-0 items-start gap-1.5">
@@ -186,7 +195,9 @@ export function ProjectCard({ project: proj, isPrivileged, onEdit }: ProjectCard
             <CardContent className="space-y-3">
               {/* Description */}
               {proj.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{proj.description}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {proj.description}
+                </p>
               )}
 
               {/* Commercial info */}

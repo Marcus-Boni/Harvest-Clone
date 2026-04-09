@@ -83,7 +83,12 @@ export async function getAccessibleProjectIds(
       : Promise.resolve([]),
   ]);
 
-  return [...new Set([...memberships.map((item) => item.projectId), ...managedProjects.map((item) => item.id)])];
+  return [
+    ...new Set([
+      ...memberships.map((item) => item.projectId),
+      ...managedProjects.map((item) => item.id),
+    ]),
+  ];
 }
 
 export async function canAccessProject(
@@ -145,11 +150,16 @@ export async function ensureManagerAssignableUsers(
     return false;
   }
 
-  const allowedIds = new Set([actor.userId, ...(await getDirectReportIds(actor.userId))]);
+  const allowedIds = new Set([
+    actor.userId,
+    ...(await getDirectReportIds(actor.userId)),
+  ]);
   return userIds.every((userId) => allowedIds.has(userId));
 }
 
-export async function getScopedUserIds(actor: ActorContext): Promise<string[] | null> {
+export async function getScopedUserIds(
+  actor: ActorContext,
+): Promise<string[] | null> {
   if (actor.role === "admin") {
     return null;
   }
@@ -191,7 +201,9 @@ export async function getScopedProjectIdsForUser(actor: ActorContext) {
   return ids ?? [];
 }
 
-export async function getManagedProjectIds(actor: ActorContext): Promise<string[] | null> {
+export async function getManagedProjectIds(
+  actor: ActorContext,
+): Promise<string[] | null> {
   if (actor.role === "admin") {
     return null;
   }

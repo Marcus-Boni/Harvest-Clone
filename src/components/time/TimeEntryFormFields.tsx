@@ -86,7 +86,6 @@ export function TimeEntryFormFields({
   const billable = form.watch("billable");
   const description = form.watch("description");
 
-
   const hasDescriptionVariants =
     Boolean(descriptionVariants) &&
     descriptionVariants?.concise !== descriptionVariants?.packaged;
@@ -152,9 +151,7 @@ export function TimeEntryFormFields({
                 type="button"
                 size="sm"
                 variant={
-                  activeDescriptionVariant === "concise"
-                    ? "default"
-                    : "outline"
+                  activeDescriptionVariant === "concise" ? "default" : "outline"
                 }
                 className={
                   activeDescriptionVariant === "concise"

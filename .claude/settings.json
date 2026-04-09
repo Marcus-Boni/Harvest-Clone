@@ -1,7 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(xargs ls:*)"
-    ]
+    "allow": ["Bash(xargs ls:*)"]
   }
 }

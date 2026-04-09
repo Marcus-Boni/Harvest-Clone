@@ -38,10 +38,7 @@ function isTokenRecoveryError(error: unknown) {
   );
 }
 
-async function refreshMicrosoftToken(
-  headers: Headers,
-  accountId?: string,
-) {
+async function refreshMicrosoftToken(headers: Headers, accountId?: string) {
   try {
     return (await auth.api.refreshToken({
       body: {

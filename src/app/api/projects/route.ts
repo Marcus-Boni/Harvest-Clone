@@ -119,7 +119,9 @@ export async function POST(req: Request): Promise<Response> {
     const assigneeIds = [...new Set([managerId, ...data.memberIds])];
     if (!(await ensureManagerAssignableUsers(actor, assigneeIds))) {
       return Response.json(
-        { error: "Gerentes só podem atribuir a si mesmos e aos seus liderados." },
+        {
+          error: "Gerentes só podem atribuir a si mesmos e aos seus liderados.",
+        },
         { status: 403 },
       );
     }
@@ -137,7 +139,9 @@ export async function POST(req: Request): Promise<Response> {
         columns: { code: true },
       });
 
-      const existingCodes = new Set(existing.map((existingProject) => existingProject.code));
+      const existingCodes = new Set(
+        existing.map((existingProject) => existingProject.code),
+      );
       code = base;
       let suffix = 1;
       while (existingCodes.has(code)) {

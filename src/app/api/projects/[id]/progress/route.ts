@@ -1,5 +1,9 @@
 import { eq } from "drizzle-orm";
-import { canAccessProject, getActiveSession, getActorContext } from "@/lib/access-control";
+import {
+  canAccessProject,
+  getActiveSession,
+  getActorContext,
+} from "@/lib/access-control";
 import { findAzureDevopsConfigByUserId } from "@/lib/azure-devops/config";
 import { db } from "@/lib/db";
 import { azureDevopsConfig, project } from "@/lib/db/schema";
@@ -70,9 +74,7 @@ async function fetchAzureApi<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(
-      `[Azure ${res.status}] ${JSON.stringify(body)}`,
-    );
+    throw new Error(`[Azure ${res.status}] ${JSON.stringify(body)}`);
   }
 
   return res.json() as Promise<T>;
@@ -140,7 +142,9 @@ async function fetchProjectSchedulingData(
   }
 
   const progressPercent =
-    estimated > 0 ? Math.min(Math.round((completed / estimated) * 100), 100) : 0;
+    estimated > 0
+      ? Math.min(Math.round((completed / estimated) * 100), 100)
+      : 0;
   const efficiency =
     estimated > 0 ? Math.round((completed / estimated) * 100) : 0;
 
@@ -153,7 +157,6 @@ async function fetchProjectSchedulingData(
     efficiency,
   };
 }
-
 
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
@@ -192,7 +195,10 @@ export async function GET(
     });
 
     if (!found) {
-      return Response.json({ error: "Projeto não encontrado." }, { status: 404 });
+      return Response.json(
+        { error: "Projeto não encontrado." },
+        { status: 404 },
+      );
     }
 
     // No Azure link — tell client explicitly
@@ -201,8 +207,8 @@ export async function GET(
     }
 
     // Resolve Azure credentials: project manager → current user → any admin
-    // We prefer the manager's PAT because the manager is guaranteed to have access 
-    // to the Azure project they imported. If an admin views it, their personal PAT 
+    // We prefer the manager's PAT because the manager is guaranteed to have access
+    // to the Azure project they imported. If an admin views it, their personal PAT
     // might lack permissions on the Azure side, causing a 404.
     let azureConf = null;
 
@@ -227,7 +233,10 @@ export async function GET(
     try {
       const decryptedPat = decrypt(azureConf.pat);
       if (!decryptedPat) {
-        console.error("[GET /api/projects/[id]/progress] Failed to decrypt PAT for config", azureConf.id);
+        console.error(
+          "[GET /api/projects/[id]/progress] Failed to decrypt PAT for config",
+          azureConf.id,
+        );
         return Response.json(unconfiguredResponse("no_azure_config"));
       }
 
@@ -239,7 +248,10 @@ export async function GET(
       return Response.json(progress);
     } catch (azureErr) {
       // Log for debugging but don't crash — tell client "no data"
-      console.error("[GET /api/projects/[id]/progress] Azure request failed:", azureErr);
+      console.error(
+        "[GET /api/projects/[id]/progress] Azure request failed:",
+        azureErr,
+      );
       return Response.json(unconfiguredResponse("no_data"));
     }
   } catch (err) {

@@ -33,7 +33,10 @@ interface UseReleasesReturn {
   publishRelease: (
     id: string,
     notifyUsers: boolean,
-  ) => Promise<{ release: Release; email: { sent: number; failed: number } | null }>;
+  ) => Promise<{
+    release: Release;
+    email: { sent: number; failed: number } | null;
+  }>;
 }
 
 export function useReleases(): UseReleasesReturn {

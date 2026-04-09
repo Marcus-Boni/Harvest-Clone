@@ -17,7 +17,10 @@ export async function GET(req: Request): Promise<Response> {
 
   try {
     const suggestions = await db.query.suggestion.findMany({
-      where: actor.role === "admin" ? undefined : eq(suggestion.userId, actor.userId),
+      where:
+        actor.role === "admin"
+          ? undefined
+          : eq(suggestion.userId, actor.userId),
       with: {
         user: {
           columns: { id: true, name: true, email: true, image: true },

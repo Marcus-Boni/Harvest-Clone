@@ -44,9 +44,7 @@ function getLocalTime(tz: string): {
   const rawHour = parts.find((p) => p.type === "hour")?.value ?? "0";
   // hour12: false can produce "24" for midnight in some environments; normalize
   const hour = parseInt(rawHour) % 24;
-  const minute = parseInt(
-    parts.find((p) => p.type === "minute")?.value ?? "0",
-  );
+  const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0");
 
   return { dayOfWeek, hour, minute };
 }
@@ -61,9 +59,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token || token !== cronSecret) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

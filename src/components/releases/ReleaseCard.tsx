@@ -283,7 +283,9 @@ export default function ReleaseCard({
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                      <AlertDialogCancel disabled={isDeleting}>
+                        Cancelar
+                      </AlertDialogCancel>
                       <AlertDialogAction
                         onClick={(e) => {
                           e.preventDefault();

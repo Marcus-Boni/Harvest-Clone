@@ -199,9 +199,7 @@ export function MonthView({
 
               const hasEntries = totalMinutes > 0;
               const metTarget =
-                actualTarget > 0
-                  ? totalMinutes >= actualTarget
-                  : hasEntries; // Se fez horas no fds, meta batida!
+                actualTarget > 0 ? totalMinutes >= actualTarget : hasEntries; // Se fez horas no fds, meta batida!
 
               const percentage =
                 actualTarget > 0
@@ -248,9 +246,7 @@ export function MonthView({
                         <span
                           className={cn(
                             "font-mono text-[11px] font-semibold tracking-tight sm:text-xs",
-                            metTarget
-                              ? "text-emerald-500"
-                              : "text-amber-500",
+                            metTarget ? "text-emerald-500" : "text-amber-500",
                           )}
                         >
                           {formatCompactDuration(totalMinutes)}
@@ -259,9 +255,7 @@ export function MonthView({
                           <div
                             className={cn(
                               "h-full rounded-full transition-all duration-500",
-                              metTarget
-                                ? "bg-emerald-500"
-                                : "bg-amber-500",
+                              metTarget ? "bg-emerald-500" : "bg-amber-500",
                             )}
                             style={{
                               width: `${Math.max(percentage * 100, 15)}%`,

@@ -479,7 +479,8 @@ export function DayView({
                           className={cn(
                             "group flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-1.5 text-xs text-foreground/80 transition-colors",
                             "hover:border-brand-500/30 hover:bg-brand-500/5 hover:text-brand-600 dark:hover:text-brand-400",
-                            selectedDateLocked && "opacity-50 cursor-not-allowed",
+                            selectedDateLocked &&
+                              "opacity-50 cursor-not-allowed",
                           )}
                         >
                           <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-muted/50 group-hover:bg-brand-500/10">

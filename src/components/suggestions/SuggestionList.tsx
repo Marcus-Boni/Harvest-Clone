@@ -101,10 +101,7 @@ export default function SuggestionList({
         className="flex flex-col items-center gap-4 rounded-xl border border-border/50 py-16 text-center"
       >
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-500/10">
-          <Lightbulb
-            className="h-7 w-7 text-brand-400"
-            aria-hidden="true"
-          />
+          <Lightbulb className="h-7 w-7 text-brand-400" aria-hidden="true" />
         </div>
         <div>
           <p className="font-medium text-foreground">
@@ -116,7 +113,7 @@ export default function SuggestionList({
             {suggestions.length === 0
               ? isAdmin
                 ? "Quando os membros enviarem sugestões, elas aparecerão aqui."
-                : "Clique em \"Nova Sugestão\" para compartilhar sua ideia."
+                : 'Clique em "Nova Sugestão" para compartilhar sua ideia.'
               : "Tente selecionar outro filtro de status."}
           </p>
         </div>

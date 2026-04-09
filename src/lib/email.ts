@@ -253,8 +253,7 @@ export async function sendHoursReminderBatch(
 ): Promise<{ sent: number; failed: number }> {
   const resend = getResendClient();
   const from =
-    process.env.RESEND_FROM_EMAIL ??
-    "OptSolv Time <noreply@optsolv.com.br>";
+    process.env.RESEND_FROM_EMAIL ?? "OptSolv Time <noreply@optsolv.com.br>";
 
   const BATCH_SIZE = 100;
   let sent = 0;

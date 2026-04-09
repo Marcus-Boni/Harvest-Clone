@@ -56,8 +56,6 @@ const viewSkeletonKeys = [
   "time-view-skeleton-3",
 ];
 
-
-
 function truncateText(value: string, maxLength: number) {
   if (value.length <= maxLength) {
     return value;
@@ -237,8 +235,6 @@ export default function TimePage() {
   const { getOrCreateTimesheet, submitTimesheet } = useTimesheets(undefined, {
     enabled: false,
   });
-
-
 
   useEffect(() => {
     setActiveView(preferences.defaultView);

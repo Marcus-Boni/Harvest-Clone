@@ -1,7 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bell, FolderKanban, MoreHorizontal, UserCheck, UserX } from "lucide-react";
+import {
+  Bell,
+  FolderKanban,
+  MoreHorizontal,
+  UserCheck,
+  UserX,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import ManageProjectsDialog from "@/components/people/ManageProjectsDialog";
@@ -184,7 +190,9 @@ export default function PersonCard({
           .
         </>
       ),
-      confirmLabel: action.nextIsActive ? "Reativar acesso" : "Desativar acesso",
+      confirmLabel: action.nextIsActive
+        ? "Reativar acesso"
+        : "Desativar acesso",
     };
   }
 
@@ -273,7 +281,9 @@ export default function PersonCard({
                   <span className="sr-only">Acoes</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel className="text-xs">Acoes</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs">
+                    Acoes
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => setIsManageProjectsOpen(true)}
@@ -291,7 +301,9 @@ export default function PersonCard({
                   </DropdownMenuItem>
 
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs">Cargo</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs">
+                    Cargo
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {sessionRole === "admin" && (
                     <DropdownMenuItem
@@ -380,7 +392,9 @@ export default function PersonCard({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isUpdating}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isUpdating}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();

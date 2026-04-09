@@ -22,7 +22,11 @@ import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import type { ProjectFromAPI, ProjectScope, TeamMember } from "@/components/projects/types";
+import type {
+  ProjectFromAPI,
+  ProjectScope,
+  TeamMember,
+} from "@/components/projects/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -243,7 +247,9 @@ export function ProjectEditDialog({
       description: project.description ?? "",
       clientName: project.clientName ?? "",
       color: project.color,
-      status: (project.status as "open" | "active" | "archived" | "completed") ?? "open",
+      status:
+        (project.status as "open" | "active" | "archived" | "completed") ??
+        "open",
       billable: project.billable,
       budget: project.budget?.toString() ?? "",
       commercialName: project.commercialName ?? "",
@@ -281,7 +287,7 @@ export function ProjectEditDialog({
       try {
         const res = await fetch("/api/project-scopes");
         if (res.ok) {
-          const data = await res.json() as { scopes: ProjectScope[] };
+          const data = (await res.json()) as { scopes: ProjectScope[] };
           setScopes(data.scopes);
         }
       } catch {
@@ -354,7 +360,8 @@ export function ProjectEditDialog({
           // Send all selected members — the PUT handler deduplicates with managerId
           memberIds: Array.from(selectedMembers),
           managerId: project.managerId ?? currentUserId,
-          azureProjectId: data.azureProjectId || project.azureProjectId || undefined,
+          azureProjectId:
+            data.azureProjectId || project.azureProjectId || undefined,
           commercialName: data.commercialName || null,
           startDate: data.startDate || null,
           endDate: data.endDate || null,
@@ -611,7 +618,10 @@ export function ProjectEditDialog({
             <Separator />
 
             {/* ── Informações Comerciais ───────────────────────────────────── */}
-            <section aria-labelledby="edit-commercial-label" className="space-y-4">
+            <section
+              aria-labelledby="edit-commercial-label"
+              className="space-y-4"
+            >
               <Label
                 id="edit-commercial-label"
                 className="flex items-center gap-2 text-sm font-semibold text-foreground"
@@ -622,7 +632,9 @@ export function ProjectEditDialog({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="edit-commercial-name">Responsável Comercial</Label>
+                  <Label htmlFor="edit-commercial-name">
+                    Responsável Comercial
+                  </Label>
                   <Input
                     id="edit-commercial-name"
                     placeholder="Ex: João Silva"
@@ -664,7 +676,10 @@ export function ProjectEditDialog({
             {isAdmin && (
               <>
                 <Separator />
-                <section aria-labelledby="edit-scope-label" className="space-y-4">
+                <section
+                  aria-labelledby="edit-scope-label"
+                  className="space-y-4"
+                >
                   <Label
                     id="edit-scope-label"
                     className="flex items-center gap-2 text-sm font-semibold text-foreground"
@@ -691,12 +706,17 @@ export function ProjectEditDialog({
                                 setValue("currentStage", "");
                               }}
                             >
-                              <SelectTrigger id="edit-scope-select" className="h-9">
+                              <SelectTrigger
+                                id="edit-scope-select"
+                                className="h-9"
+                              >
                                 <SelectValue placeholder="Selecionar escopo..." />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">
-                                  <span className="italic text-muted-foreground">Sem escopo</span>
+                                  <span className="italic text-muted-foreground">
+                                    Sem escopo
+                                  </span>
                                 </SelectItem>
                                 {scopes.map((scope) => (
                                   <SelectItem key={scope.id} value={scope.id}>
@@ -718,20 +738,35 @@ export function ProjectEditDialog({
                         name="currentStage"
                         render={({ field }) => {
                           const watchedScopeId = watch("scopeId");
-                          const selectedScope = scopes.find((s) => s.id === watchedScopeId);
+                          const selectedScope = scopes.find(
+                            (s) => s.id === watchedScopeId,
+                          );
                           const stages = selectedScope?.stages ?? [];
                           return (
                             <Select
                               value={field.value ?? "none"}
-                              onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                              onValueChange={(v) =>
+                                field.onChange(v === "none" ? "" : v)
+                              }
                               disabled={stages.length === 0}
                             >
-                              <SelectTrigger id="edit-stage-select" className="h-9">
-                                <SelectValue placeholder={stages.length === 0 ? "Selecione um escopo" : "Selecionar etapa..."} />
+                              <SelectTrigger
+                                id="edit-stage-select"
+                                className="h-9"
+                              >
+                                <SelectValue
+                                  placeholder={
+                                    stages.length === 0
+                                      ? "Selecione um escopo"
+                                      : "Selecionar etapa..."
+                                  }
+                                />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="none">
-                                  <span className="italic text-muted-foreground">Sem etapa</span>
+                                  <span className="italic text-muted-foreground">
+                                    Sem etapa
+                                  </span>
                                 </SelectItem>
                                 {stages.map((stage) => (
                                   <SelectItem key={stage} value={stage}>

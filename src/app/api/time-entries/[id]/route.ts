@@ -1,8 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import {
-  canAccessProject,
-  getActorContext,
-} from "@/lib/access-control";
+import { canAccessProject, getActorContext } from "@/lib/access-control";
 import { auth } from "@/lib/auth";
 import { triggerCompletedWorkSync } from "@/lib/azure-devops/sync";
 import { db } from "@/lib/db";

@@ -15,10 +15,7 @@ export async function GET(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
-  const limit = Math.min(
-    Number(url.searchParams.get("limit") ?? "20"),
-    100,
-  );
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? "20"), 100);
   const offset = Number(url.searchParams.get("offset") ?? "0");
 
   try {

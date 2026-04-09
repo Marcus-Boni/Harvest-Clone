@@ -380,7 +380,9 @@ function DashboardContent() {
   }, [from, selectedProjectId, to]);
 
   const firstName =
-    dashboardNow && !sessionPending ? session?.user?.name?.split(" ")[0] ?? "" : "";
+    dashboardNow && !sessionPending
+      ? (session?.user?.name?.split(" ")[0] ?? "")
+      : "";
   const selectedProject =
     selectedProjectId === "all"
       ? null

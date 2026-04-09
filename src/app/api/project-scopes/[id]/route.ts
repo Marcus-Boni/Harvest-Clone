@@ -34,10 +34,15 @@ export async function GET(
     });
 
     if (!found) {
-      return Response.json({ error: "Escopo não encontrado." }, { status: 404 });
+      return Response.json(
+        { error: "Escopo não encontrado." },
+        { status: 404 },
+      );
     }
 
-    return Response.json({ scope: { ...found, stages: safeParseStages(found.stages) } });
+    return Response.json({
+      scope: { ...found, stages: safeParseStages(found.stages) },
+    });
   } catch (err) {
     console.error("[GET /api/project-scopes/[id]]:", err);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
@@ -73,7 +78,10 @@ export async function PUT(
       where: eq(projectScope.id, id),
     });
     if (!existing) {
-      return Response.json({ error: "Escopo não encontrado." }, { status: 404 });
+      return Response.json(
+        { error: "Escopo não encontrado." },
+        { status: 404 },
+      );
     }
 
     const { name, stages, defaultStatus } = parsed.data;
@@ -83,7 +91,9 @@ export async function PUT(
       .where(eq(projectScope.id, id))
       .returning();
 
-    return Response.json({ scope: { ...updated, stages: safeParseStages(updated.stages) } });
+    return Response.json({
+      scope: { ...updated, stages: safeParseStages(updated.stages) },
+    });
   } catch (err) {
     console.error("[PUT /api/project-scopes/[id]]:", err);
     return Response.json({ error: "Internal Server Error" }, { status: 500 });
@@ -115,7 +125,10 @@ export async function DELETE(
       where: eq(projectScope.id, id),
     });
     if (!existing) {
-      return Response.json({ error: "Escopo não encontrado." }, { status: 404 });
+      return Response.json(
+        { error: "Escopo não encontrado." },
+        { status: 404 },
+      );
     }
 
     await db.delete(projectScope).where(eq(projectScope.id, id));

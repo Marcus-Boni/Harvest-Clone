@@ -14,7 +14,12 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-export type ProjectStatusFilter = "all" | "open" | "active" | "archived" | "completed";
+export type ProjectStatusFilter =
+  | "all"
+  | "open"
+  | "active"
+  | "archived"
+  | "completed";
 export type ProjectMembershipFilter = "all" | "member";
 
 export interface ProjectFilterState {
@@ -59,7 +64,12 @@ export function ProjectFilters({
     filters.scopeId !== "all";
 
   function handleReset() {
-    onFiltersChange({ search: "", status: "all", membership: "all", scopeId: "all" });
+    onFiltersChange({
+      search: "",
+      status: "all",
+      membership: "all",
+      scopeId: "all",
+    });
   }
 
   return (
@@ -119,9 +129,7 @@ export function ProjectFilters({
         {isAdmin && availableScopes.length > 0 && (
           <Select
             value={filters.scopeId}
-            onValueChange={(v) =>
-              onFiltersChange({ ...filters, scopeId: v })
-            }
+            onValueChange={(v) => onFiltersChange({ ...filters, scopeId: v })}
           >
             <SelectTrigger
               id="projects-scope-filter"

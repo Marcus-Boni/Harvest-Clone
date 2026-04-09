@@ -107,8 +107,12 @@ export function TimeEntryForm({
   mode = "create",
   allowContinue = true,
 }: TimeEntryFormProps) {
-  const { preferences, saveLastProjectId, saveAgendaProject, updatePreferences } =
-    useUserTimePreferences();
+  const {
+    preferences,
+    saveLastProjectId,
+    saveAgendaProject,
+    updatePreferences,
+  } = useUserTimePreferences();
   const [projects, setProjects] = useState<Project[]>([]);
   const [workItem, setWorkItem] = useState<{
     id: number;
@@ -156,7 +160,7 @@ export function TimeEntryForm({
 
       if (!wasOpenRef.current) {
         wasOpenRef.current = true;
-        
+
         if (preferences.outlookDrawerDefaultOpen) {
           setOutlookOpen(true);
         }
@@ -197,16 +201,16 @@ export function TimeEntryForm({
         new Date(iso.endsWith("Z") ? iso : `${iso}Z`);
 
       setActiveDescriptionVariant(null);
-      
+
       const subject = event.subject || "";
       const normalizedSubject = subject.trim().toLowerCase();
       agendaSubjectRef.current = normalizedSubject || null;
-      
+
       form.setValue("description", subject, {
         shouldDirty: true,
         shouldValidate: true,
       });
-      
+
       const mappedProjectId =
         normalizedSubject && preferences.agendaProjectMap
           ? preferences.agendaProjectMap[normalizedSubject]
@@ -232,7 +236,7 @@ export function TimeEntryForm({
         ),
         { shouldDirty: true, shouldValidate: true },
       );
-      
+
       // Removed setOutlookOpen(false) to keep drawer open for "Create and continue" workflow
     },
     [form, preferences.agendaProjectMap],

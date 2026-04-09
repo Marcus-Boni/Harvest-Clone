@@ -33,7 +33,9 @@ function buildPoolConnectionConfig(rawUrl: string): {
 } {
   const parsedUrl = new URL(rawUrl);
   const sslMode = parsedUrl.searchParams.get("sslmode")?.toLowerCase();
-  const isAzurePostgresHost = parsedUrl.hostname.endsWith(".postgres.database.azure.com");
+  const isAzurePostgresHost = parsedUrl.hostname.endsWith(
+    ".postgres.database.azure.com",
+  );
   const requiresSsl =
     isAzurePostgresHost ||
     sslMode === "require" ||
@@ -74,7 +76,9 @@ const pool =
       process.env.DB_POOL_CONNECTION_TIMEOUT_MS,
       5_000,
     ),
-    ssl: requiresSsl ? { rejectUnauthorized: sslRejectUnauthorized } : undefined,
+    ssl: requiresSsl
+      ? { rejectUnauthorized: sslRejectUnauthorized }
+      : undefined,
   });
 
 if (process.env.NODE_ENV !== "production") {

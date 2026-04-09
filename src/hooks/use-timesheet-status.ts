@@ -36,7 +36,11 @@ export function useTimesheetStatus(
   const [loading, setLoading] = useState(false);
 
   const commitSnapshot = useCallback(
-    (requestId: number, snapshot: TimesheetStatusSnapshot, isLoading: boolean) => {
+    (
+      requestId: number,
+      snapshot: TimesheetStatusSnapshot,
+      isLoading: boolean,
+    ) => {
       if (requestId !== requestIdRef.current) {
         return snapshot;
       }
@@ -73,7 +77,9 @@ export function useTimesheetStatus(
 
     try {
       const params = new URLSearchParams({ date });
-      const response = await fetch(`/api/timesheets/status?${params.toString()}`);
+      const response = await fetch(
+        `/api/timesheets/status?${params.toString()}`,
+      );
       const data = (await response.json()) as Partial<TimesheetStatusResponse>;
 
       if (!response.ok) {

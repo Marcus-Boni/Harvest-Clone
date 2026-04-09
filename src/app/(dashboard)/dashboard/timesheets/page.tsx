@@ -171,8 +171,7 @@ function CurrentWeekCard({ ts, submitting, onSubmit }: TimesheetCardProps) {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {(ts.status === "open" ||
-              ts.status === "rejected") && (
+            {(ts.status === "open" || ts.status === "rejected") && (
               <SubmitButton
                 ts={ts}
                 submitting={submitting}

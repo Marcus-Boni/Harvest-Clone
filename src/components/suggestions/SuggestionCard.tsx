@@ -73,7 +73,10 @@ export default function SuggestionCard({
   const [adminNotes, setAdminNotes] = useState(suggestion.adminNotes ?? "");
 
   async function handleStatusUpdate() {
-    if (selectedStatus === suggestion.status && adminNotes === (suggestion.adminNotes ?? "")) {
+    if (
+      selectedStatus === suggestion.status &&
+      adminNotes === (suggestion.adminNotes ?? "")
+    ) {
       toast.info("Nenhuma alteração foi feita.");
       return;
     }
@@ -155,7 +158,9 @@ export default function SuggestionCard({
                   size="sm"
                   className="mt-1 h-7 gap-1 px-0 text-xs text-brand-400 hover:bg-transparent hover:text-brand-500"
                   aria-expanded={isExpanded}
-                  aria-label={isExpanded ? "Recolher descrição" : "Ver descrição completa"}
+                  aria-label={
+                    isExpanded ? "Recolher descrição" : "Ver descrição completa"
+                  }
                 >
                   <ChevronDown
                     className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
@@ -197,7 +202,9 @@ export default function SuggestionCard({
                   </p>
                   <Select
                     value={selectedStatus}
-                    onValueChange={(v) => setSelectedStatus(v as SuggestionStatus)}
+                    onValueChange={(v) =>
+                      setSelectedStatus(v as SuggestionStatus)
+                    }
                     disabled={isUpdating}
                   >
                     <SelectTrigger
