@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { CalendarDays, ChevronDown, Clock, Users } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -13,40 +13,68 @@ import { formatDuration } from "@/lib/utils";
 
 // ─── Animation variants ────────────────────────────────────────────────────────
 
-const pageVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.07 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: "easeOut" },
+    transition: {
+      duration: 0.3,
+      ease: [0.25, 0.46, 0.45, 0.94],
+      staggerChildren: 0.08,
+    },
   },
 };
 
-const groupVariants = {
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
+
+const groupVariants: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.06 } },
+  visible: {
+    transition: {
+      staggerChildren: 0.06,
+    },
+  },
 };
 
-const cardVariants = {
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
 };
 
-const collapseVariants = {
+const collapseVariants: Variants = {
   open: {
     height: "auto",
     opacity: 1,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: {
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1],
+    },
   },
   closed: {
     height: 0,
     opacity: 0,
-    transition: { duration: 0.25, ease: "easeIn" },
+    transition: {
+      duration: 0.3,
+      ease: [0.16, 1, 0.3, 1],
+    },
   },
 };
 
@@ -322,6 +350,7 @@ export default function TimesheetApprovalsPage() {
         await approveTimesheet(id);
         toast.success("Timesheet aprovado com sucesso.");
       } catch (error: unknown) {
+        console.error("[TimesheetApprovalsPage] handleApprove:", error);
         toast.error(
           error instanceof Error
             ? error.message
@@ -339,6 +368,7 @@ export default function TimesheetApprovalsPage() {
         await rejectTimesheet(id, reason);
         toast.success("Timesheet rejeitado com sucesso.");
       } catch (error: unknown) {
+        console.error("[TimesheetApprovalsPage] handleReject:", error);
         toast.error(
           error instanceof Error
             ? error.message

@@ -15,6 +15,16 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "sonner";
 import { TimesheetEntriesTable } from "@/components/timesheets/TimesheetEntriesTable";
 import { TimesheetStatusBadge } from "@/components/timesheets/TimesheetStatusBadge";
@@ -28,7 +38,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTimesheetDetail } from "@/hooks/use-timesheets";
 import { isTimesheetSubmittableStatus } from "@/lib/timesheet-status";
@@ -43,6 +52,92 @@ const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 };
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+
+interface DayChartEntry {
+  label: string;
+  dateKey: string;
+  billable: number;
+  nonBillable: number;
+  total: number;
+  isToday: boolean;
+}
+
+interface ChartTooltipEntry {
+  name: string;
+  value: number;
+  color: string;
+  dataKey: string;
+}
+
+interface ChartTooltipContentProps {
+  active?: boolean;
+  payload?: ChartTooltipEntry[];
+  label?: string;
+}
+
+function DailyHoursTooltip({
+  active,
+  payload,
+  label,
+}: ChartTooltipContentProps) {
+  if (!active || !payload?.length) return null;
+
+  const billable = payload.find((p) => p.dataKey === "billable")?.value ?? 0;
+  const nonBillable =
+    payload.find((p) => p.dataKey === "nonBillable")?.value ?? 0;
+  const total = billable + nonBillable;
+
+  return (
+    <div className="min-w-[160px] rounded-xl border border-white/10 bg-neutral-900 p-3 shadow-xl">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-neutral-400">
+        {label}
+      </p>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-xs text-neutral-400">Faturável</span>
+          </div>
+          <span className="font-mono text-xs font-semibold text-white">
+            {formatDuration(hoursToMinutes(billable))}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-orange-500" />
+            <span className="text-xs text-neutral-400">Não faturável</span>
+          </div>
+          <span className="font-mono text-xs font-semibold text-white">
+            {formatDuration(hoursToMinutes(nonBillable))}
+          </span>
+        </div>
+        {total > 0 && (
+          <div className="mt-2 flex items-center justify-between gap-4 border-t border-white/10 pt-2">
+            <span className="text-xs font-medium text-neutral-300">Total</span>
+            <span className="font-mono text-xs font-bold text-white">
+              {formatDuration(hoursToMinutes(total))}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function minutesToHours(minutes: number): number {
+  return Math.round((minutes / 60) * 100) / 100;
+}
+
+function hoursToMinutes(hours: number): number {
+  return Math.round(hours * 60);
+}
+
+function hoursTickFormatter(value: number): string {
+  if (value === 0) return "0";
+  return `${value}h`;
+}
 
 function parsePeriodLabel(period: string, periodType: string): string {
   if (periodType === "weekly") {
@@ -423,71 +518,179 @@ export default function TimesheetDetailPage() {
         >
           <Card className="border-border/60 bg-card/80">
             <CardHeader>
-              <CardTitle className="font-display text-lg">
-                {timesheet.periodType === "weekly"
-                  ? "Dias da semana"
-                  : "Dias do período"}
-              </CardTitle>
-              <CardDescription>
-                Totais diários com separação entre horas faturáveis e não
-                faturáveis.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid min-w-0 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-              {days.map((day) => (
-                <div
-                  key={day.dateKey}
-                  className="rounded-xl border border-border/60 bg-background/50 p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {format(day.date, "EEEE", { locale: ptBR })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(day.date, "dd 'de' MMMM", { locale: ptBR })}
-                      </p>
-                    </div>
-                    {day.totalMinutes > 0 ? (
-                      <Badge variant="outline">
-                        {day.entries.length} regs.
-                      </Badge>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className="text-muted-foreground"
-                      >
-                        Sem horas
-                      </Badge>
-                    )}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="font-display text-lg">
+                    {timesheet.periodType === "weekly"
+                      ? "Dias da semana"
+                      : "Dias do período"}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Horas faturáveis e não faturáveis por dia do período.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-500" />
+                    Faturável
                   </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Total</span>
-                      <span className="font-mono font-semibold text-foreground">
-                        {formatDuration(day.totalMinutes)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Faturável</span>
-                      <span className="font-mono text-green-600 dark:text-green-400">
-                        {formatDuration(day.billableMinutes)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Não faturável
-                      </span>
-                      <span className="font-mono text-foreground">
-                        {formatDuration(day.totalMinutes - day.billableMinutes)}
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block h-2.5 w-2.5 rounded-sm bg-orange-500" />
+                    Não faturável
                   </div>
                 </div>
-              ))}
+              </div>
+            </CardHeader>
+            <CardContent className="pb-2 pt-0">
+              {(() => {
+                const chartData: DayChartEntry[] = days.map((day) => ({
+                  label: format(day.date, "EEE", { locale: ptBR }),
+                  dateKey: day.dateKey,
+                  billable: minutesToHours(day.billableMinutes),
+                  nonBillable: minutesToHours(
+                    day.totalMinutes - day.billableMinutes,
+                  ),
+                  total: minutesToHours(day.totalMinutes),
+                  isToday: day.dateKey === format(new Date(), "yyyy-MM-dd"),
+                }));
+
+                const maxHours = Math.max(
+                  ...chartData.map((d) => d.billable + d.nonBillable),
+                  1,
+                );
+                const yMax = Math.ceil(maxHours / 2) * 2 + 2;
+
+                return (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+                      barCategoryGap="28%"
+                      barGap={0}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255,255,255,0.05)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="label"
+                        tick={{
+                          fontSize: 11,
+                          fill: "currentColor",
+                          className: "text-muted-foreground",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={6}
+                      />
+                      <YAxis
+                        tickFormatter={hoursTickFormatter}
+                        tick={{
+                          fontSize: 11,
+                          fill: "currentColor",
+                          className: "text-muted-foreground",
+                        }}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={[0, yMax]}
+                        allowDecimals={false}
+                      />
+                      <Tooltip
+                        content={<DailyHoursTooltip />}
+                        cursor={{
+                          fill: "rgba(255,255,255,0.04)",
+                          radius: 8,
+                        }}
+                      />
+                      <Bar
+                        dataKey="billable"
+                        name="Faturável"
+                        stackId="hours"
+                        radius={[0, 0, 0, 0]}
+                        maxBarSize={52}
+                        isAnimationActive
+                        animationDuration={600}
+                        animationEasing="ease-out"
+                      >
+                        {chartData.map((entry) => (
+                          <Cell
+                            key={`billable-${entry.dateKey}`}
+                            fill={
+                              entry.isToday ? "#16a34a" : "rgba(34,197,94,0.72)"
+                            }
+                          />
+                        ))}
+                      </Bar>
+                      <Bar
+                        dataKey="nonBillable"
+                        name="Não faturável"
+                        stackId="hours"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={52}
+                        isAnimationActive
+                        animationDuration={700}
+                        animationEasing="ease-out"
+                      >
+                        {chartData.map((entry) => (
+                          <Cell
+                            key={`nonbillable-${entry.dateKey}`}
+                            fill={
+                              entry.isToday
+                                ? "#f97316"
+                                : "rgba(249,115,22,0.55)"
+                            }
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                );
+              })()}
+
+              {/* Daily summary row */}
+              <div
+                className={`mt-1 grid gap-1`}
+                style={{
+                  gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {days.map((day) => {
+                  const hasHours = day.totalMinutes > 0;
+                  const isToday =
+                    day.dateKey === format(new Date(), "yyyy-MM-dd");
+                  return (
+                    <div
+                      key={day.dateKey}
+                      className="flex flex-col items-center gap-0.5 py-1"
+                    >
+                      <span
+                        className={`font-mono text-[10px] font-semibold tabular-nums ${
+                          isToday
+                            ? "text-brand-500"
+                            : hasHours
+                              ? "text-foreground"
+                              : "text-muted-foreground/50"
+                        }`}
+                      >
+                        {hasHours ? formatDuration(day.totalMinutes) : "—"}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`h-4 rounded-sm px-1 text-[9px] font-medium ${
+                          hasHours
+                            ? "border-border/60 text-muted-foreground"
+                            : "border-transparent text-transparent"
+                        }`}
+                      >
+                        {hasHours
+                          ? `${day.entries.length} registros`
+                          : "0 registros"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </motion.div>
