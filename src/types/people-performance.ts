@@ -33,7 +33,6 @@ export interface PeoplePerformanceProjectSnapshot {
   itemsWithoutEstimate: number;
   remainingHours: number;
   loggedMinutes30d: number;
-  commits30d: number;
 }
 
 export interface PeoplePerformanceWorkItemSnapshot {
@@ -53,15 +52,7 @@ export interface PeoplePerformanceWorkItemSnapshot {
   unestimated: boolean;
 }
 
-export interface PeoplePerformanceCommitSnapshot {
-  id: string;
-  message: string;
-  projectName: string;
-  repositoryName: string;
-  timestamp: string;
-  branch: string | null;
-  linkedWorkItems: number;
-}
+
 
 export interface PeoplePerformanceUserRow {
   user: {
@@ -92,8 +83,6 @@ export interface PeoplePerformanceUserRow {
     loggedThisWeekMinutes: number;
     logged30dMinutes: number;
     utilizationPercent: number;
-    commits30d: number;
-    linkedCommits30d: number;
     lastActivityAt: string | null;
     performanceScore: number;
     health: PeoplePerformanceHealth;
@@ -106,7 +95,6 @@ export interface PeoplePerformanceUserRow {
   alerts: PeoplePerformanceAlert[];
   projects: PeoplePerformanceProjectSnapshot[];
   topWorkItems: PeoplePerformanceWorkItemSnapshot[];
-  recentCommits: PeoplePerformanceCommitSnapshot[];
 }
 
 export interface PeoplePerformanceSummary {
@@ -117,7 +105,6 @@ export interface PeoplePerformanceSummary {
   activeItems: number;
   remainingHours: number;
   loggedThisWeekMinutes: number;
-  commits30d: number;
   pendingTimesheets: number;
   averagePerformanceScore: number;
 }

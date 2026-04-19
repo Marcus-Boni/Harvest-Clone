@@ -2,6 +2,7 @@
 
 import { Bell, Calendar } from "lucide-react";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import InviteUserDialog from "@/components/people/InviteUserDialog";
 import PeoplePerformanceDashboard from "@/components/people/PeoplePerformanceDashboard";
 import ReminderBulkModal from "@/components/people/ReminderBulkModal";
@@ -9,6 +10,16 @@ import ReminderScheduleDrawer from "@/components/people/ReminderScheduleDrawer";
 import { Button } from "@/components/ui/button";
 import { usePeoplePerformance } from "@/hooks/use-people-performance";
 import { useSession } from "@/lib/auth-client";
+
+const containerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.05 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
 
 export default function PeoplePage() {
   const { data: session } = useSession();
@@ -22,8 +33,16 @@ export default function PeoplePage() {
   const [isScheduleDrawerOpen, setIsScheduleDrawerOpen] = useState(false);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-12"
+    >
+      <motion.div
+        variants={itemVariants}
+        className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"
+      >
         <div className="max-w-3xl">
           <h1 className="font-display text-2xl font-bold text-foreground">
             Equipe e capacidade operacional
@@ -59,16 +78,18 @@ export default function PeoplePage() {
             <InviteUserDialog sessionRole={sessionRole} />
           </div>
         ) : null}
-      </div>
+      </motion.div>
 
-      <PeoplePerformanceDashboard
-        data={data}
-        loading={loading}
-        error={error}
-        onRetry={() => void refetch()}
-        sessionRole={sessionRole}
-        sessionUserId={sessionUserId}
-      />
+      <motion.div variants={itemVariants}>
+        <PeoplePerformanceDashboard
+          data={data}
+          loading={loading}
+          error={error}
+          onRetry={() => void refetch()}
+          sessionRole={sessionRole}
+          sessionUserId={sessionUserId}
+        />
+      </motion.div>
 
       {canInvite ? (
         <>
@@ -84,6 +105,6 @@ export default function PeoplePage() {
           />
         </>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

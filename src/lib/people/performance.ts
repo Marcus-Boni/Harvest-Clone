@@ -2,7 +2,6 @@ import { endOfISOWeek, format, startOfISOWeek, subDays } from "date-fns";
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { type ActorContext, buildScopedUserWhere } from "@/lib/access-control";
 import { createAzureDevOpsClient } from "@/lib/azure-devops/client";
-import { buildCommitAuthorCandidates } from "@/lib/azure-devops/commit-author";
 import { db } from "@/lib/db";
 import {
   azureDevopsConfig,
@@ -17,7 +16,6 @@ import { getWeekPeriod } from "@/lib/utils";
 import type { AzureDevOpsAssignedWorkItem } from "@/types/azure-devops";
 import type {
   PeoplePerformanceAlert,
-  PeoplePerformanceCommitSnapshot,
   PeoplePerformanceHealth,
   PeoplePerformanceProjectSnapshot,
   PeoplePerformanceResponse,
@@ -55,7 +53,6 @@ type AzureConfigRecord = {
 
 const STALE_ITEM_DAYS = 7;
 const MAX_WORK_ITEMS = 80;
-const MAX_COMMITS = 30;
 const USER_CONCURRENCY = 3;
 
 function normalizeNumber(value: number) {
@@ -322,7 +319,6 @@ export async function getPeoplePerformance(
         activeItems: 0,
         remainingHours: 0,
         loggedThisWeekMinutes: 0,
-        commits30d: 0,
         pendingTimesheets: 0,
         averagePerformanceScore: 0,
       },
@@ -478,7 +474,6 @@ export async function getPeoplePerformance(
 
       const alerts: PeoplePerformanceAlert[] = [];
       const topWorkItems: PeoplePerformanceWorkItemSnapshot[] = [];
-      const recentCommits: PeoplePerformanceCommitSnapshot[] = [];
       const projectSnapshots: PeoplePerformanceProjectSnapshot[] = [];
 
       let activeItems = 0;
@@ -487,8 +482,6 @@ export async function getPeoplePerformance(
       let itemsWithoutEstimate = 0;
       let remainingHours = 0;
       let completedHours = 0;
-      let commits30d = 0;
-      let linkedCommits30d = 0;
       let lastActivityAt: string | null = null;
       let analyzedProjects = 0;
 
@@ -524,35 +517,18 @@ export async function getPeoplePerformance(
           );
         } else {
           const client = createAzureDevOpsClient(config.organizationUrl, pat);
-          const authorCandidates = buildCommitAuthorCandidates({
-            configuredAuthor: config.commitAuthor,
-            userEmail: person.email,
-            userName: person.name,
-          });
           const projectRefs = azureProjects.map(
             (currentProject) =>
               currentProject.azureProjectId ?? currentProject.name,
           );
           analyzedProjects = projectRefs.length;
 
-          const [workItemResults, commitResults] = await Promise.all([
+          const [workItemResults] = await Promise.all([
             Promise.allSettled(
               projectRefs.map((projectRef) =>
                 client.getAssignedWorkItems(projectRef, MAX_WORK_ITEMS),
               ),
             ),
-            authorCandidates.length === 0
-              ? Promise.resolve([])
-              : Promise.allSettled(
-                  projectRefs.map((projectRef) =>
-                    client.getRecentCommits(projectRef, {
-                      authorCandidates,
-                      fromDate: last30DaysStart,
-                      toDate: todayIso,
-                      top: MAX_COMMITS,
-                    }),
-                  ),
-                ),
           ]);
 
           const workItemsMap = new Map<number, AzureDevOpsAssignedWorkItem>();
@@ -566,28 +542,6 @@ export async function getPeoplePerformance(
 
             for (const item of result.value) {
               workItemsMap.set(item.id, item);
-            }
-          }
-
-          const commitsMap = new Map<string, PeoplePerformanceCommitSnapshot>();
-          let commitFailures = 0;
-
-          for (const result of commitResults) {
-            if (result.status === "rejected") {
-              commitFailures += 1;
-              continue;
-            }
-
-            for (const commit of result.value) {
-              commitsMap.set(commit.id, {
-                id: commit.id,
-                message: commit.message,
-                projectName: commit.projectName,
-                repositoryName: commit.repositoryName,
-                timestamp: commit.timestamp,
-                branch: commit.branch,
-                linkedWorkItems: commit.workItemIds.length,
-              });
             }
           }
 
@@ -607,7 +561,6 @@ export async function getPeoplePerformance(
               remainingHours: 0,
               loggedMinutes30d:
                 perProjectLocalMinutes.get(currentProject.id) ?? 0,
-              commits30d: 0,
             });
           }
 
@@ -641,7 +594,6 @@ export async function getPeoplePerformance(
                 itemsWithoutEstimate: 0,
                 remainingHours: 0,
                 loggedMinutes30d: 0,
-                commits30d: 0,
               }),
             );
             metricBucket.activeItems += 1;
@@ -685,33 +637,7 @@ export async function getPeoplePerformance(
             }
           }
 
-          for (const commit of commitsMap.values()) {
-            commits30d += 1;
-            linkedCommits30d += commit.linkedWorkItems > 0 ? 1 : 0;
-            recentCommits.push(commit);
 
-            const metricBucket = getOrCreateMapEntry(
-              projectMetrics,
-              commit.projectName,
-              () => ({
-                activeItems: 0,
-                staleItems: 0,
-                itemsWithoutEstimate: 0,
-                remainingHours: 0,
-                loggedMinutes30d: 0,
-                commits30d: 0,
-              }),
-            );
-            metricBucket.commits30d += 1;
-
-            if (
-              !lastActivityAt ||
-              new Date(commit.timestamp).getTime() >
-                new Date(lastActivityAt).getTime()
-            ) {
-              lastActivityAt = commit.timestamp;
-            }
-          }
 
           for (const currentProject of assignedProjects) {
             const metrics = projectMetrics.get(currentProject.name);
@@ -729,7 +655,6 @@ export async function getPeoplePerformance(
               itemsWithoutEstimate: metrics.itemsWithoutEstimate,
               remainingHours: normalizeNumber(metrics.remainingHours),
               loggedMinutes30d: metrics.loggedMinutes30d,
-              commits30d: metrics.commits30d,
             });
           }
 
@@ -740,17 +665,6 @@ export async function getPeoplePerformance(
                 "warning",
                 "Cobertura parcial de backlog",
                 `${workItemFailures} projeto(s) não puderam ser consultados no Azure DevOps com este PAT.`,
-              ),
-            );
-          }
-
-          if (commitFailures > 0) {
-            alerts.push(
-              buildAlert(
-                "azure-commits-partial",
-                "warning",
-                "Cobertura parcial de commits",
-                `${commitFailures} projeto(s) não retornaram commits para este colaborador no período analisado.`,
               ),
             );
           }
@@ -858,11 +772,7 @@ export async function getPeoplePerformance(
         return (left.priority ?? 99) - (right.priority ?? 99);
       });
 
-      recentCommits.sort(
-        (left, right) =>
-          new Date(right.timestamp).getTime() -
-          new Date(left.timestamp).getTime(),
-      );
+
 
       projectSnapshots.sort((left, right) => {
         if (right.activeItems !== left.activeItems) {
@@ -908,8 +818,7 @@ export async function getPeoplePerformance(
           loggedThisWeekMinutes,
           logged30dMinutes,
           utilizationPercent,
-          commits30d,
-          linkedCommits30d,
+
           lastActivityAt,
           performanceScore,
           health,
@@ -928,7 +837,6 @@ export async function getPeoplePerformance(
         }),
         projects: projectSnapshots.slice(0, 6),
         topWorkItems: topWorkItems.slice(0, 8),
-        recentCommits: recentCommits.slice(0, 8),
       } satisfies PeoplePerformanceUserRow;
     },
   );
@@ -950,7 +858,6 @@ export async function getPeoplePerformance(
       acc.activeItems += row.metrics.activeItems;
       acc.remainingHours += row.metrics.remainingHours;
       acc.loggedThisWeekMinutes += row.metrics.loggedThisWeekMinutes;
-      acc.commits30d += row.metrics.commits30d;
       acc.pendingTimesheets +=
         row.metrics.timesheetStatus &&
         row.metrics.timesheetStatus !== "approved" &&
@@ -968,7 +875,6 @@ export async function getPeoplePerformance(
       activeItems: 0,
       remainingHours: 0,
       loggedThisWeekMinutes: 0,
-      commits30d: 0,
       pendingTimesheets: 0,
       averagePerformanceScore: 0,
     },
