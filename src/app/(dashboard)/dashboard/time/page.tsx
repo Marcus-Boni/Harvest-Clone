@@ -4,6 +4,7 @@ import {
   endOfISOWeek,
   endOfMonth,
   format,
+  getISOWeek,
   startOfISOWeek,
   startOfMonth,
 } from "date-fns";
@@ -236,8 +237,12 @@ export default function TimePage() {
   const { getOrCreateTimesheet, submitTimesheet, timesheets } = useTimesheets();
 
   const pendingSubmitWeeksCount = useMemo(() => {
+    const now = new Date();
+    const currentPeriod = `${format(now, "yyyy")}-W${getISOWeek(now).toString().padStart(2, "0")}`;
     return timesheets.filter(
-      (timesheet) => timesheet.status === "open" || timesheet.status === "rejected",
+      (timesheet) =>
+        (timesheet.status === "open" || timesheet.status === "rejected") &&
+        timesheet.period < currentPeriod,
     ).length;
   }, [timesheets]);
 

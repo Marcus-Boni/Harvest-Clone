@@ -303,7 +303,7 @@ export function TimesheetsView() {
   const currentWeekTs = timesheets.find((ts) => ts.period === currentPeriod);
   const pendingTimesheets = timesheets.filter(
     (ts) =>
-      ts.period !== currentPeriod &&
+      ts.period < currentPeriod &&
       (ts.status === "open" || ts.status === "rejected"),
   );
   const historyTimesheets = timesheets.filter(

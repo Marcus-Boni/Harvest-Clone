@@ -1,6 +1,8 @@
 "use client";
 
+import { format, getISOWeek } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
+import { useMemo } from "react";
 import {
   CheckSquare,
   ChevronLeft,
@@ -200,10 +202,18 @@ export function Sidebar() {
   });
   const isManager =
     !isPending && (user?.role === "manager" || user?.role === "admin");
+
+  const currentPeriod = useMemo(() => {
+    const now = new Date();
+    return `${format(now, "yyyy")}-W${getISOWeek(now).toString().padStart(2, "0")}`;
+  }, []);
+
   const pendingSubmitWeeksCount = timesheets.filter(
     (timesheet) =>
-      timesheet.status === "open" || timesheet.status === "rejected",
+      (timesheet.status === "open" || timesheet.status === "rejected") &&
+      timesheet.period < currentPeriod,
   ).length;
+
   const navigation = baseNavigation.map((item) =>
     item.href === "/dashboard/time"
       ? {
