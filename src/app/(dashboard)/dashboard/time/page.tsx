@@ -233,9 +233,13 @@ export default function TimePage() {
       to: dateRange.to,
     });
 
-  const { getOrCreateTimesheet, submitTimesheet } = useTimesheets(undefined, {
-    enabled: false,
-  });
+  const { getOrCreateTimesheet, submitTimesheet, timesheets } = useTimesheets();
+
+  const pendingSubmitWeeksCount = useMemo(() => {
+    return timesheets.filter(
+      (timesheet) => timesheet.status === "open" || timesheet.status === "rejected",
+    ).length;
+  }, [timesheets]);
 
   useEffect(() => {
     setActiveView(preferences.defaultView);
@@ -861,6 +865,7 @@ export default function TimePage() {
           <TimeViewTabs
             activeView={activeView}
             onViewChange={handleViewChange}
+            pendingSubmitWeeksCount={pendingSubmitWeeksCount}
           />
         </div>
       </motion.section>
