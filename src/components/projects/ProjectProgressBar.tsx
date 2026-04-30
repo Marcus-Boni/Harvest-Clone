@@ -22,6 +22,7 @@ export interface ProjectProgressBarProps {
   startDate?: string | null;
   endDate?: string | null;
   showSchedule?: boolean;
+  compact?: boolean;
   className?: string;
 }
 
@@ -39,12 +40,13 @@ export function ProjectProgressBar({
   startDate,
   endDate,
   showSchedule = false,
+  compact = false,
   className,
 }: ProjectProgressBarProps) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
 
   const scheduleData = useMemo(() => {
-    if (!showSchedule || !startDate || !endDate) return null;
+    if (!startDate || !endDate) return null;
     const [sYr, sMo, sDa] = startDate.split("-").map(Number);
     const [eYr, eMo, eDa] = endDate.split("-").map(Number);
 
@@ -59,9 +61,14 @@ export function ProjectProgressBar({
     const ONE_DAY = 86400000;
     const totalDays = Math.max(1, Math.ceil((end - start) / ONE_DAY));
 
-    if (now < start) return { percent: 0, label: `0 / ${totalDays} dias` };
+    if (now < start)
+      return { percent: 0, label: `0 / ${totalDays} dias`, isPast: false };
     if (now >= end)
-      return { percent: 100, label: `${totalDays} / ${totalDays} dias` };
+      return {
+        percent: 100,
+        label: `${totalDays} / ${totalDays} dias`,
+        isPast: true,
+      };
 
     const elapsedDays = Math.ceil((now - start) / ONE_DAY);
     const percent = Math.min(
@@ -69,8 +76,12 @@ export function ProjectProgressBar({
       Math.max(0, Math.round(((now - start) / (end - start)) * 100)),
     );
 
-    return { percent, label: `${elapsedDays} / ${totalDays} dias` };
-  }, [startDate, endDate, showSchedule]);
+    return {
+      percent,
+      label: `${elapsedDays} / ${totalDays} dias`,
+      isPast: false,
+    };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     // Not linked — nothing to fetch, don't render (caller decides the fallback)
@@ -193,7 +204,7 @@ export function ProjectProgressBar({
   return (
     <div className={cn("space-y-2", className)}>
       {/* Progress bar */}
-      <div className="relative">
+      <div className="relative pt-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">
             <Activity className="h-3 w-3" />
@@ -203,17 +214,35 @@ export function ProjectProgressBar({
             {progressPercent}%
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="relative h-1.5 w-full rounded-full bg-white/5 shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]">
           <motion.div
-            className={cn("h-full rounded-full bg-gradient-to-r", barColor)}
+            className={cn(
+              "h-full rounded-full bg-gradient-to-r overflow-hidden",
+              barColor,
+            )}
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
-            transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
           />
+
+          {/* Ideal Marker */}
+          {scheduleData && !scheduleData.isPast && (
+            <motion.div
+              className="absolute top-[-2px] bottom-[-2px] w-[2px] rounded-full bg-blue-500/80 z-10"
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{
+                opacity: 1,
+                scaleY: 1,
+                left: `${scheduleData.percent}%`,
+              }}
+              transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+              title={`Progresso Ideal: ${scheduleData.percent}%`}
+            />
+          )}
         </div>
       </div>
 
-      {scheduleData && (
+      {showSchedule && scheduleData && !compact && (
         <div className="relative pt-1">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[11px] font-medium text-neutral-400 flex items-center gap-1">
@@ -252,26 +281,28 @@ export function ProjectProgressBar({
       )}
 
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-2">
-        <ProgressMetric
-          icon={<Clock className="h-3 w-3 shrink-0" />}
-          label="Estimado"
-          value={`${estimated}h`}
-          highlight={false}
-        />
-        <ProgressMetric
-          icon={<TrendingUp className="h-3 w-3 shrink-0" />}
-          label="Concluído"
-          value={`${completed}h`}
-          highlight={false}
-        />
-        <ProgressMetric
-          icon={<Zap className="h-3 w-3 shrink-0" />}
-          label="Eficiência"
-          value={`${efficiency}%`}
-          highlight={efficiency > 100}
-        />
-      </div>
+      {!compact && (
+        <div className="grid grid-cols-3 gap-2">
+          <ProgressMetric
+            icon={<Clock className="h-3 w-3 shrink-0" />}
+            label="Estimado"
+            value={`${estimated}h`}
+            highlight={false}
+          />
+          <ProgressMetric
+            icon={<TrendingUp className="h-3 w-3 shrink-0" />}
+            label="Concluído"
+            value={`${completed}h`}
+            highlight={false}
+          />
+          <ProgressMetric
+            icon={<Zap className="h-3 w-3 shrink-0" />}
+            label="Eficiência"
+            value={`${efficiency}%`}
+            highlight={efficiency > 100}
+          />
+        </div>
+      )}
     </div>
   );
 }

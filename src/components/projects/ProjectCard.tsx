@@ -3,11 +3,11 @@
 import { motion } from "framer-motion";
 import { CalendarRange, Cloud, Edit2, Folder, Link2, User } from "lucide-react";
 import Link from "next/link";
+import { ProjectProgressBar } from "@/components/projects/ProjectProgressBar";
+import type { ProjectFromAPI } from "@/components/projects/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, getInitials } from "@/lib/utils";
-import { ProjectProgressBar } from "@/components/projects/ProjectProgressBar";
-import type { ProjectFromAPI } from "@/components/projects/types";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -117,7 +117,7 @@ export function ProjectCard({
               isArchived && "opacity-60",
             )}
           >
-            <CardHeader className="pb-2">
+            <CardHeader>
               <div className="flex items-start gap-3">
                 <ProjectImage
                   imageUrl={proj.imageUrl}
@@ -192,7 +192,7 @@ export function ProjectCard({
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 -mt-2">
               {/* Description */}
               {proj.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2">
@@ -225,6 +225,8 @@ export function ProjectCard({
                 <ProjectProgressBar
                   projectId={proj.id}
                   azureProjectId={proj.azureProjectId}
+                  startDate={proj.startDate}
+                  endDate={proj.endDate}
                 />
               ) : isPrivileged ? (
                 <button

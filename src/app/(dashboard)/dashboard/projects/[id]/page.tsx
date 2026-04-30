@@ -587,6 +587,8 @@ export default function ProjectDetailPage() {
                   <ProjectProgressBar
                     projectId={project.id}
                     azureProjectId={project.azureProjectId}
+                    startDate={project.startDate}
+                    endDate={project.endDate}
                     className="px-6 pb-5 pt-0"
                   />
                 </CardContent>
